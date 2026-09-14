@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { UserSandboxRuntimePoolRecord } from '@weclaws/db';
+import type { BotSandboxRuntimePoolRecord } from '@weiling-ai/db';
 import {
   createSandboxRuntimePoolConfigDocument,
   writeSandboxRuntimePoolConfigFile,
@@ -17,8 +17,8 @@ afterEach(async () => {
 describe('srt-pool-config-file', () => {
   it('renders enabled and disabled pools into a stable config document', () => {
     const pools = [
-      createPoolFixture({ ownerUserId: 'user_b', port: 31_001 }),
-      createPoolFixture({ ownerUserId: 'user_a', port: 31_000 }),
+      createPoolFixture({ botInstanceId: 'bot_b', port: 31_001 }),
+      createPoolFixture({ botInstanceId: 'bot_a', port: 31_000 }),
     ];
 
     const document = createSandboxRuntimePoolConfigDocument({
@@ -30,16 +30,16 @@ describe('srt-pool-config-file', () => {
 
     expect(document).toMatchObject({
       updatedAt: '2026-05-02T00:00:00.000Z',
-      version: 1,
+      version: 2,
     });
-    expect(document.pools.map((pool) => pool.ownerUserId)).toEqual(['user_a', 'user_b']);
+    expect(document.pools.map((pool) => pool.botInstanceId)).toEqual(['bot_a', 'bot_b']);
     expect(document.pools[0]).toMatchObject({
-      apiKey: 'api-key-user_a',
+      apiKey: 'api-key-bot_a',
+      botInstanceId: 'bot_a',
       defaultAllowWrite: ['/tmp'],
       enabled: true,
-      ownerUserId: 'user_a',
       url: 'http://sandbox-runtime:31000',
-      workspaceMapFile: '/app/storage/sandbox-runtime-private/workspace-map/user_a.json',
+      workspaceMapFile: join('/app/storage/sandbox-runtime-private/workspace-map', 'bot_a.json'),
     });
   });
 
@@ -51,7 +51,7 @@ describe('srt-pool-config-file', () => {
     await writeSandboxRuntimePoolConfigFile({
       filePath,
       now: new Date('2026-05-02T00:00:00.000Z'),
-      pools: [createPoolFixture({ ownerUserId: 'user_1' })],
+      pools: [createPoolFixture({ botInstanceId: 'bot_1' })],
       serviceHost: 'sandbox-runtime',
       workspaceMapDir: join(dir, 'private', 'workspace-map'),
     });
@@ -60,8 +60,8 @@ describe('srt-pool-config-file', () => {
       pools: Array<{ apiKey?: string; workspaceMapFile?: string }>;
     };
 
-    expect(document.pools[0].apiKey).toBe('api-key-user_1');
-    expect(document.pools[0].workspaceMapFile).toBe(join(dir, 'private', 'workspace-map', 'user_1.json'));
+    expect(document.pools[0].apiKey).toBe('api-key-bot_1');
+    expect(document.pools[0].workspaceMapFile).toBe(join(dir, 'private', 'workspace-map', 'bot_1.json'));
   });
 
   it('strips fatal linux deny paths from persisted pool config', () => {
@@ -82,12 +82,12 @@ describe('srt-pool-config-file', () => {
 });
 
 function createPoolFixture(
-  overrides: Partial<UserSandboxRuntimePoolRecord> = {},
-): UserSandboxRuntimePoolRecord {
-  const ownerUserId = overrides.ownerUserId ?? 'user_1';
-
+  overrides: Partial<BotSandboxRuntimePoolRecord> = {},
+): BotSandboxRuntimePoolRecord {
+  const botInstanceId = overrides.botInstanceId ?? 'bot_1';
   return {
-    apiKey: `api-key-${ownerUserId}`,
+    apiKey: `api-key-${botInstanceId}`,
+    botInstanceId,
     createdAt: new Date('2026-05-02T00:00:00.000Z'),
     defaultAllowRead: [],
     defaultAllowWrite: ['/tmp'],
@@ -96,10 +96,9 @@ function createPoolFixture(
     defaultDenyWrite: ['.env'],
     enabled: true,
     healthCheckIntervalMs: 60_000,
-    id: `pool_${ownerUserId}`,
+    id: `pool_${botInstanceId}`,
     maxConcurrentInit: 1,
     minReadyProcesses: 1,
-    ownerUserId,
     poolSize: 3,
     port: 31_000,
     portRangeEnd: 9_199,
@@ -107,7 +106,7 @@ function createPoolFixture(
     restartRequestedAt: null,
     sessionTimeoutMs: 600_000,
     updatedAt: new Date('2026-05-02T00:00:00.000Z'),
-    workspaceBasePath: `/app/apps/sandbox-runtime/user-workspaces/${ownerUserId}`,
+    workspaceBasePath: `/app/apps/sandbox-runtime/user-workspaces/${botInstanceId}`,
     ...overrides,
   };
 }

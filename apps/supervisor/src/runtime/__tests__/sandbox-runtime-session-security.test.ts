@@ -35,7 +35,7 @@ afterEach(async () => {
 
 describe('sandbox-runtime session security override', () => {
   it('keeps the outward workspace path real and translates virtual cwd roots back to the real bot scope', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'weclaws-sandbox-runtime-session-security-'));
+    const dir = await mkdtemp(join(tmpdir(), 'weiling-sandbox-runtime-session-security-'));
     tempDirs.push(dir);
 
     const workspacePath = join(dir, 'instances', 'bot_1', 'workspace');
@@ -107,7 +107,7 @@ describe('sandbox-runtime session security override', () => {
   });
 
   it('recovers the real workspace and state roots for restored sessions that lost internal markers', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'weclaws-sandbox-runtime-session-security-'));
+    const dir = await mkdtemp(join(tmpdir(), 'weiling-sandbox-runtime-session-security-'));
     tempDirs.push(dir);
 
     const workspacePath = join(dir, 'instances', 'bot_1', 'workspace');
@@ -182,7 +182,7 @@ describe('sandbox-runtime session security override', () => {
   });
 
   it('keeps deny-then-allow read restrictions around the current bot workspace and data roots', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'weclaws-sandbox-runtime-session-security-'));
+    const dir = await mkdtemp(join(tmpdir(), 'weiling-sandbox-runtime-session-security-'));
     tempDirs.push(dir);
 
     const workspaceBaseRoot = join(dir, 'sandbox-user-workspaces');

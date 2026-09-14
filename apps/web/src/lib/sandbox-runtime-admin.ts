@@ -1,17 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import type {
-  UpdateUserSandboxRuntimePoolInput,
-  UserSandboxRuntimePoolRecord,
-} from '@weclaws/db';
-import { normalizeSandboxRuntimeDenyReadPaths } from '@weclaws/shared';
+  BotSandboxRuntimePoolRecord,
+  UpdateBotSandboxRuntimePoolInput,
+} from '@weiling-ai/db';
+import { normalizeSandboxRuntimeDenyReadPaths } from '@weiling-ai/shared';
 import { z } from 'zod';
 import { ApiError } from './api-error';
 import type { WebRepositories } from './repositories';
 
 type SandboxRuntimeAdminRepositories = {
-  userSandboxRuntimePools: Pick<
-    WebRepositories['userSandboxRuntimePools'],
-    'listAll' | 'requestRestart' | 'updateByOwnerUserId'
+  botInstances: Pick<WebRepositories['botInstances'], 'findById'>;
+  botSandboxRuntimePools: Pick<
+    WebRepositories['botSandboxRuntimePools'],
+    'listAll' | 'requestRestart' | 'updateByBotInstanceId'
   >;
   users: Pick<WebRepositories['users'], 'findById'>;
 };
@@ -30,9 +31,6 @@ const sandboxRuntimePoolPatchSchema = z.object({
   maxConcurrentInit: positiveIntegerSchema.optional(),
   minReadyProcesses: positiveIntegerSchema.optional(),
   poolSize: positiveIntegerSchema.optional(),
-  port: positiveIntegerSchema.optional(),
-  portRangeEnd: positiveIntegerSchema.optional(),
-  portRangeStart: positiveIntegerSchema.optional(),
   sessionTimeoutMs: positiveIntegerSchema.optional(),
 }).strict().superRefine((payload, context) => {
   if (
@@ -47,17 +45,6 @@ const sandboxRuntimePoolPatchSchema = z.object({
     });
   }
 
-  if (
-    payload.portRangeStart !== undefined
-    && payload.portRangeEnd !== undefined
-    && payload.portRangeStart > payload.portRangeEnd
-  ) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'portRangeStart must be less than or equal to portRangeEnd.',
-      path: ['portRangeStart'],
-    });
-  }
 });
 
 const runtimeManagerStatusSchema = z.object({
@@ -77,19 +64,18 @@ const runtimeManagerStatusSchema = z.object({
 
 const runtimePoolStatusSchema = z.object({
   activeSessions: z.number().nullable().optional(),
+  botInstanceId: z.string(),
   busyProcesses: z.number().nullable().optional(),
   cpuPercent: z.number().nullable().optional(),
   lastErrorMessage: z.string().nullable().optional(),
   lastExitCode: z.number().nullable().optional(),
   lastHealthAt: z.string().nullable().optional(),
   lastRestartAt: z.string().nullable().optional(),
-  ownerUserId: z.string(),
   pid: z.number().nullable().optional(),
   readyProcesses: z.number().nullable().optional(),
   rssBytes: z.number().nullable().optional(),
   startedAt: z.string().nullable().optional(),
   state: z.string().optional(),
-  url: z.string().nullable().optional(),
 }).passthrough();
 
 const runtimeStatusDocumentSchema = z.object({
@@ -112,7 +98,6 @@ export interface AdminSandboxRuntimePoolRuntime {
   rssBytes: number | null;
   startedAt: string | null;
   state: string;
-  url: string | null;
 }
 
 export interface AdminSandboxRuntimeManagerStatus {
@@ -131,7 +116,8 @@ export interface AdminSandboxRuntimeManagerStatus {
 }
 
 export interface AdminSandboxRuntimePoolItem {
-  apiKeyConfigured: boolean;
+  botInstanceId: string;
+  botName: string | null;
   createdAt: string;
   defaultAllowRead: string[];
   defaultAllowWrite: string[];
@@ -146,14 +132,10 @@ export interface AdminSandboxRuntimePoolItem {
   ownerEmail: string | null;
   ownerUserId: string;
   poolSize: number;
-  port: number;
-  portRangeEnd: number;
-  portRangeStart: number;
   restartRequestedAt: string | null;
   runtime: AdminSandboxRuntimePoolRuntime | null;
   sessionTimeoutMs: number;
   updatedAt: string;
-  workspaceBasePath: string;
 }
 
 export interface AdminSandboxRuntimePoolsPayload {
@@ -168,13 +150,13 @@ export interface ListAdminSandboxRuntimePoolsInput {
 }
 
 export interface UpdateAdminSandboxRuntimePoolInput {
-  ownerUserId: string;
+  botInstanceId: string;
   payload: unknown;
   repositories: SandboxRuntimeAdminRepositories;
 }
 
 export interface RequestAdminSandboxRuntimePoolRestartInput {
-  ownerUserId: string;
+  botInstanceId: string;
   repositories: SandboxRuntimeAdminRepositories;
 }
 
@@ -182,21 +164,26 @@ export async function listAdminSandboxRuntimePools(
   input: ListAdminSandboxRuntimePoolsInput,
 ): Promise<AdminSandboxRuntimePoolsPayload> {
   const [pools, statusDocument] = await Promise.all([
-    input.repositories.userSandboxRuntimePools.listAll(),
+    input.repositories.botSandboxRuntimePools.listAll(),
     readRuntimeStatusDocument(input.statusFilePath),
   ]);
-  const runtimeByOwnerUserId = new Map(
-    (statusDocument?.pools ?? []).map((poolStatus) => [poolStatus.ownerUserId, toRuntimeStatus(poolStatus)]),
+  const runtimeByBotInstanceId = new Map(
+    (statusDocument?.pools ?? []).map((poolStatus) => [poolStatus.botInstanceId, toRuntimeStatus(poolStatus)]),
   );
-  const ownerEmailByUserId = await fetchOwnerEmails(input.repositories, pools);
+  const metadataByBotInstanceId = await fetchPoolMetadata(input.repositories, pools);
 
   return {
     manager: statusDocument?.manager ? toManagerStatus(statusDocument.manager) : null,
-    pools: pools.map((pool) => toAdminSandboxRuntimePoolItem(
-      pool,
-      ownerEmailByUserId.get(pool.ownerUserId) ?? null,
-      runtimeByOwnerUserId.get(pool.ownerUserId) ?? null,
-    )),
+    pools: pools.map((pool) => {
+      const metadata = metadataByBotInstanceId.get(pool.botInstanceId);
+      return toAdminSandboxRuntimePoolItem(
+        pool,
+        metadata?.botName ?? null,
+        metadata?.ownerUserId ?? 'unknown',
+        metadata?.ownerEmail ?? null,
+        runtimeByBotInstanceId.get(pool.botInstanceId) ?? null,
+      );
+    }),
     statusUpdatedAt: statusDocument?.updatedAt ?? null,
   };
 }
@@ -217,17 +204,24 @@ export async function updateAdminSandboxRuntimePool(
         defaultDenyRead: normalizeSandboxRuntimeDenyReadPaths(parsed.data.defaultDenyRead),
       }
       : parsed.data;
-    const updated = await input.repositories.userSandboxRuntimePools.updateByOwnerUserId(
-      input.ownerUserId,
-      nextPayload satisfies UpdateUserSandboxRuntimePoolInput,
+    const updated = await input.repositories.botSandboxRuntimePools.updateByBotInstanceId(
+      input.botInstanceId,
+      nextPayload satisfies UpdateBotSandboxRuntimePoolInput,
     );
 
     if (!updated) {
       throw notFoundError();
     }
 
-    const owner = await input.repositories.users.findById(updated.ownerUserId);
-    return toAdminSandboxRuntimePoolItem(updated, owner?.email ?? null, null);
+    const bot = await input.repositories.botInstances.findById(updated.botInstanceId);
+    const owner = bot ? await input.repositories.users.findById(bot.ownerUserId) : null;
+    return toAdminSandboxRuntimePoolItem(
+      updated,
+      bot?.name ?? null,
+      bot?.ownerUserId ?? 'unknown',
+      owner?.email ?? null,
+      null,
+    );
   } catch (error) {
     throw mapSandboxRuntimePoolRepositoryError(error);
   }
@@ -235,16 +229,16 @@ export async function updateAdminSandboxRuntimePool(
 
 export async function requestAdminSandboxRuntimePoolRestart(
   input: RequestAdminSandboxRuntimePoolRestartInput,
-): Promise<{ ownerUserId: string; restartRequestedAt: string | null }> {
+): Promise<{ botInstanceId: string; restartRequestedAt: string | null }> {
   const restartedAt = new Date();
-  const pool = await input.repositories.userSandboxRuntimePools.requestRestart(input.ownerUserId, restartedAt);
+  const pool = await input.repositories.botSandboxRuntimePools.requestRestart(input.botInstanceId, restartedAt);
 
   if (!pool) {
     throw notFoundError();
   }
 
   return {
-    ownerUserId: pool.ownerUserId,
+    botInstanceId: pool.botInstanceId,
     restartRequestedAt: pool.restartRequestedAt?.toISOString() ?? null,
   };
 }
@@ -265,12 +259,17 @@ async function readRuntimeStatusDocument(statusFilePath: string) {
   return runtimeStatusDocumentSchema.parse(JSON.parse(raw));
 }
 
-async function fetchOwnerEmails(
+async function fetchPoolMetadata(
   repositories: SandboxRuntimeAdminRepositories,
-  pools: readonly UserSandboxRuntimePoolRecord[],
-): Promise<Map<string, string>> {
-  const ownerIds = Array.from(new Set(pools.map((pool) => pool.ownerUserId)));
-  const users = await Promise.all(ownerIds.map(async (ownerId) => repositories.users.findById(ownerId)));
+  pools: readonly BotSandboxRuntimePoolRecord[],
+): Promise<Map<string, {
+  botName: string | null;
+  ownerEmail: string | null;
+  ownerUserId: string | null;
+}>> {
+  const bots = await Promise.all(pools.map((pool) => repositories.botInstances.findById(pool.botInstanceId)));
+  const ownerIds = Array.from(new Set(bots.flatMap((bot) => bot ? [bot.ownerUserId] : [])));
+  const users = await Promise.all(ownerIds.map((ownerId) => repositories.users.findById(ownerId)));
   const emailByUserId = new Map<string, string>();
 
   users.forEach((user, index) => {
@@ -281,16 +280,26 @@ async function fetchOwnerEmails(
     emailByUserId.set(ownerIds[index], user.email);
   });
 
-  return emailByUserId;
+  return new Map(pools.map((pool, index) => [
+    pool.botInstanceId,
+    {
+      botName: bots[index]?.name ?? null,
+      ownerEmail: bots[index] ? emailByUserId.get(bots[index]!.ownerUserId) ?? null : null,
+      ownerUserId: bots[index]?.ownerUserId ?? null,
+    },
+  ]));
 }
 
 function toAdminSandboxRuntimePoolItem(
-  pool: UserSandboxRuntimePoolRecord,
+  pool: BotSandboxRuntimePoolRecord,
+  botName: string | null,
+  ownerUserId: string,
   ownerEmail: string | null,
   runtime: AdminSandboxRuntimePoolRuntime | null,
 ): AdminSandboxRuntimePoolItem {
   return {
-    apiKeyConfigured: pool.apiKey.length > 0,
+    botInstanceId: pool.botInstanceId,
+    botName,
     createdAt: pool.createdAt.toISOString(),
     defaultAllowRead: pool.defaultAllowRead,
     defaultAllowWrite: pool.defaultAllowWrite,
@@ -303,16 +312,12 @@ function toAdminSandboxRuntimePoolItem(
     maxConcurrentInit: pool.maxConcurrentInit,
     minReadyProcesses: pool.minReadyProcesses,
     ownerEmail,
-    ownerUserId: pool.ownerUserId,
+    ownerUserId,
     poolSize: pool.poolSize,
-    port: pool.port,
-    portRangeEnd: pool.portRangeEnd,
-    portRangeStart: pool.portRangeStart,
     restartRequestedAt: pool.restartRequestedAt?.toISOString() ?? null,
     runtime,
     sessionTimeoutMs: pool.sessionTimeoutMs,
     updatedAt: pool.updatedAt.toISOString(),
-    workspaceBasePath: pool.workspaceBasePath,
   };
 }
 
@@ -330,7 +335,6 @@ function toRuntimeStatus(status: z.infer<typeof runtimePoolStatusSchema>): Admin
     rssBytes: status.rssBytes ?? null,
     startedAt: status.startedAt ?? null,
     state: status.state ?? 'unknown',
-    url: status.url ?? null,
   };
 }
 
@@ -372,7 +376,7 @@ function mapSandboxRuntimePoolRepositoryError(error: unknown): unknown {
     });
   }
 
-  if (error instanceof Error && error.message.startsWith('SRT pool ')) {
+  if (error instanceof Error && error.message.startsWith('Bot SRT pool ')) {
     return invalidConfigError();
   }
 

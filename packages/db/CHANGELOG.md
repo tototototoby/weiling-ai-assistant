@@ -1,5 +1,180 @@
 # CHANGELOG
 
+## Unreleased (QR Ten-Minute Stability)
+
+### Added
+
+- Added `BotInstanceRepository.clearQrCode()` so Supervisor can invalidate a previous process's QR on process restart.
+
+## Unreleased (Web Chat)
+
+### Added
+
+- Added migration `0024_web_chat_messages` with a durable per-Bot chat ledger (`web_chat_messages`) that stores user/assistant messages, tool-call JSON, request ID dedupe, and message status transitions.
+- Added `WebChatMessageRepository` for creating messages, dedupe lookup by request ID, chronological history listing, and terminal result updates.
+
+## Unreleased (Global Email Notifications)
+
+### Added
+
+- Added employee company-email persistence, singleton global email configuration, and idempotent email delivery repository state transitions.
+- Extended the fresh-schema contract to assert the email tables, queue fields, and employee company-email column.
+
+## Unreleased (Fresh Manual Runtime Recovery)
+
+### Fixed
+
+- Explicit Bot restart and QR reissue intents now reset the consecutive runtime restart counter so an administrator-requested recovery receives a fresh bounded attempt budget.
+- A successfully issued trusted QR code clears stale runtime errors so waiting-for-scan Bots are not presented as actively failed.
+
+## Unreleased (WeCom Employee Onboarding)
+
+### Added
+
+- Added migration `0022_wecom_onboarding` with durable inbound receipts and bounded employee-name onboarding sessions.
+- Added `WecomOnboardingRepository` for receipt replay, cooldown tracking, unique enabled employee matching, and Bot binding.
+
+### Changed
+
+- Successful employee-name binding now completes the claimed inbound receipt and removes the onboarding session in the same immediate transaction.
+- A historical bound session cannot recreate a WeCom binding after an administrator deletes or disables that binding.
+
+## Unreleased (Idempotent Scheduled Deliveries)
+
+### Changed
+
+- Made administrator-message batch creation idempotent by delivery ID and added explicit Bot/message identity-conflict detection for scheduled reminders.
+
+## Unreleased (Bot-Centric WeCom Bindings)
+
+### Added
+
+- Added migration `0020_bot_wecom_bindings`, which moves historical employee bindings onto their claimed Bots and rebuilds inbound and outbound ledgers with Bot foreign keys.
+- Added `BotWecomBindingRepository` for Bot-owned WeCom identity, channel preference, and activity telemetry with optional employee metadata.
+
+### Changed
+
+- WeCom bindings and delivery history now survive employee-directory deletion; deleting a Bot cascades its binding, receipts, and proactive-delivery rows.
+- Inbound receipt and proactive-delivery repository calls no longer require an employee ID.
+
+## Unreleased (Deferred Administrator Messages)
+
+### Added
+
+- Added migration `0019_deferred_admin_messages`, which creates the preseeded global deferral switch and the waiting-queue lookup index.
+- Added the `waiting_for_user` delivery state with Bot-scoped resume and global terminal-failure operations.
+
+### Changed
+
+- Administrator-message failure transitions now run in an immediate transaction, and terminal writes are guarded so late workers cannot overwrite sent, waiting, or failed deliveries.
+- Global administrator-message config updates are atomic and preserve timestamps when the switch value is unchanged.
+
+## Unreleased (WeCom Long Connection)
+
+### Added
+
+- Added migration `0018_wecom_long_connection` with a revisioned global connection config, unique employee bindings, and idempotent inbound message receipts.
+- Added `GlobalWecomConfigRepository.requestReconnect()` so an operator can publish reconnect intent without changing credentials; each enabled request advances revision and resets connection convergence state.
+- Added lease timestamps and attempt counters for inbound receipt reclaim, plus a generic proactive outbound ledger keyed by stable semantic keys and delivery IDs.
+
+### Changed
+
+- Connection status writes now use an atomic `id + revision` predicate so an old runtime observation cannot overwrite a newer configuration revision.
+
+## Unreleased (Morning Briefing Delivery Backoff)
+
+### Changed
+
+- `markCentralDeliveryFailed()` now atomically records both the delivery error and the validated next attempt time in `central_scheduled_for`.
+
+## Unreleased (Central Morning Briefing Delivery)
+
+### Added
+
+- Added migration `0017_central_morning_briefing_delivery` with durable next-schedule, last-delivery, and retry error fields.
+- Added narrow repository operations to plan, succeed, and fail a central morning briefing delivery without conflating it with workspace projection state.
+
+### Changed
+
+- Administrator policy changes now invalidate the previous central schedule so Supervisor recomputes it from the new policy.
+
+## Unreleased (Morning Briefing Runtime Observation)
+
+### Added
+
+- Added migration `0016_morning_briefing_runtime_observation` and durable, minimal runtime schedule observation fields to `bot_morning_briefing_policies`.
+- `MorningBriefingPolicyRepository.markSyncSucceeded()` now records the last observed task, schedule time, and pending schedule/cleanup facts without exposing FastAgent journals.
+
+## Unreleased (Bot Sandbox Runtime Pools)
+
+### Added
+
+- Added `bot_sandbox_runtime_pools` and `BotSandboxRuntimePoolRepository` for one isolated sandbox-runtime pool per Bot, with Bot-scoped restart and configuration updates.
+- Added migration `0015_bot_sandbox_runtime_pools`, which backfills existing Bots from their owner's legacy pool policy while assigning unique API keys, child ports, proxy ranges, and Bot-scoped workspace paths.
+
+### Notes
+
+- The legacy `user_sandbox_runtime_pools` table remains intact for rollback, but the new Bot repository never reads it.
+- Backfilled Bot pools normalize capacity to one worker and preserve custom workspace roots when the legacy path ends in the owner ID.
+
+## Unreleased (Supervisor Intents)
+
+### Added
+
+- Added durable administrator message delivery rows with claim, retry, success, and terminal failure semantics.
+- Added per-Bot meal reminder preferences with explicit `unasked`/`enabled`/`disabled` state and same-day reminder suppression.
+
+## Unreleased (RAGFlow Knowledge Base)
+
+### Added
+
+- Added migration `0014_ragflow` with singleton `global_ragflow_configs` and cascade-owned `bot_ragflow_sync_states` tables.
+- Added global RAGFlow configuration persistence for API base URL, server-side API key, knowledge-base label, normalized dataset IDs, revision, and durable connection-test status.
+- Added per-Bot RAGFlow projection status with pending/synced/error convergence, applied-revision validation, and automatic cleanup when a Bot is deleted.
+
+## Unreleased (QR And Employee Claim State)
+
+### Added
+
+- Added `bot_instances.qr_code_issued_at` and repository persistence/clearing for the QR expiry clock.
+- Added `employee_directory_entries.claimed_bot_instance_id` and claimed invite/name lookup so public onboarding can recover its Bot after a lost response.
+
+## 2026-07-23 (Employee Onboarding)
+
+### Added
+
+- Added employee directory, reusable employee invite links, and a singleton onboarding default LLM profile configuration in migration `0011_employee_onboarding`.
+- Added atomic employee reservation/claim repository operations that reject ambiguous names and prevent duplicate claims.
+- Added `claimReservationWithoutUser()` for public-QR onboarding that records the claim and invite usage without creating a user binding.
+- Added administrator `deleteById()` support for claimed and unclaimed employee-directory records; Bot lifecycle cleanup remains outside the repository.
+
+## 2026-07-21 (Global Agent Publishing)
+
+### Added
+
+- Added global Dify configuration and per-Bot projection repositories, including revisioned sync status and durable connection-test metadata.
+- 新增 `global_agent_configs`、`global_agent_skill_policies` 与 `bot_agent_config_sync_states` 表，以及 migration `0008_chilly_james_howlett`。
+- 新增 `GlobalAgentConfigRepository`，持久化全局 `AGENTS.md`、`SOUL.md` 和公共 Skill 启停策略，并用单一 revision 表示整套待发布配置。
+- 新增 `BotAgentConfigSyncRepository`，记录每个 Bot 的 applied revision、pending/synced/error 状态、最近错误和同步时间。
+
+### Notes
+
+- 文档或 Skill 策略只有实际变化时才会在 `immediate` transaction 内推进一次全局 revision，并把所有已有 Bot 标为待同步；DB 层不读取资源文件，也不执行工作区发布。
+- 每 Bot 同步状态以 `bot_instance_id` 为主键并级联删除；同步成功不允许写入超过当前全局配置或低于既有 applied revision 的版本。
+
+## 2026-07-21
+
+### Added
+
+- 新增 `bot_morning_briefing_policies` 表与 migration `0007_acoustic_moira_mactaggert`，为每个 Bot 保存晨报管理员意图、员工退出观测、desired/applied revision 和 supervisor 同步结果。
+- 新增 `MorningBriefingPolicyRepository`，提供单 Bot/批量策略写入、全量默认策略物化和 supervisor 观测/同步结果窄接口。
+- `BotInstanceRepository.listAllForAdministration()` 提供按创建时间与 ID 稳定排序的管理员全量 Bot 清单。
+
+### Notes
+
+- 默认策略启用，地点为厦门，发送时间为 `08:30`，时区为 `Asia/Shanghai`；管理员策略变化才推进 `desired_revision`，运行时观测不会改写管理员意图。
+- 策略以 `bot_instance_id` 为主键并使用级联外键，Bot 删除后不会残留孤立策略。
+
 ## 2026-05-14
 
 ### Changed

@@ -41,7 +41,7 @@ describe('getEnv', () => {
       WEB_USER_BOT_LIMIT: 0,
       WEB_ADMIN_EMAILS: '',
       srtPoolDefaults: expect.objectContaining({
-        poolSize: 3,
+        poolSize: 1,
         minReadyProcesses: 1,
         portBase: 31_000,
         proxyPortBase: 9_100,
@@ -137,7 +137,7 @@ describe('getEnv', () => {
         'SRT_DEFAULT_MAX_CONCURRENT_INIT=2',
         'SRT_PORT_BASE=34000',
         'SRT_PROXY_PORT_BASE=9400',
-        'SRT_WORKSPACE_BASE_ROOT=/srv/weclaws/srt-workspaces',
+        'SRT_WORKSPACE_BASE_ROOT=/srv/weiling/srt-workspaces',
       ].join('\n'),
     );
 
@@ -155,7 +155,7 @@ describe('getEnv', () => {
       poolSize: 5,
       portBase: 34_000,
       proxyPortBase: 9_400,
-      workspaceBaseRoot: '/srv/weclaws/srt-workspaces',
+      workspaceBaseRoot: '/srv/weiling/srt-workspaces',
     });
   });
 });

@@ -1,6 +1,6 @@
 {
-  "name": "@weclaws/shared",
-  "version": "0.2.7",
+  "name": "@weiling-ai/shared",
+  "version": "0.1.0-beta.1",
   "private": true,
   "type": "module",
   "exports": {

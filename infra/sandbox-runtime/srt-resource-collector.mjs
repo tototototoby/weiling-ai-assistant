@@ -50,7 +50,10 @@ export function parseProcStat(raw) {
   return {
     pid,
     startTimeTicks: Number(fields[19] ?? 0),
-    totalCpuTicks: utime + stime + cutime + cstime,
+    // Keep manager CPU scoped to the manager process. Child CPU is exposed
+    // separately by procfs and must not be counted in this process metric.
+    totalCpuTicks: utime + stime,
+    childCpuTicks: cutime + cstime,
   };
 }
 

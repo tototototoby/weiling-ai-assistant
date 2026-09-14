@@ -1,0 +1,13 @@
+# License
+
+Copyright (c) 2026 @fastagent
+
+Permission is granted to install, use, reproduce, and modify this package for internal, business, and commercial purposes.
+
+You may copy this package only as reasonably necessary to install, run, deploy, and integrate applications or services that depend on it.
+
+You may not redistribute, sublicense, or resell this package, or modified versions of it, as a standalone product, package, SDK, CLI, or developer service without prior written permission from @fastagent.
+
+No trademark rights are granted in the @fastagent name, logo, or branding.
+
+This package is provided "as is", without warranty of any kind, to the fullest extent permitted by law.

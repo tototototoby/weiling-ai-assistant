@@ -22,7 +22,7 @@ describe('api error normalization', () => {
   it('folds plain error-like objects into the generic internal error', async () => {
     const response = fail({
       code: 'SQLITE_CONSTRAINT',
-      message: 'constraint failed at /private/tmp/weclaws/test.sqlite',
+      message: 'constraint failed at /private/tmp/weiling/test.sqlite',
       status: 409,
     });
 

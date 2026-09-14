@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { createDatabaseClient, migrateDatabase } from '../../client.js';
+import { migrateDatabase } from '../../client.js';
+import {
+  closeTrackedDatabaseClients,
+  createTrackedDatabaseClient as createDatabaseClient,
+} from './test-database-client.js';
 import { botEvents } from '../../schema/bot-events.js';
 import { BotEventRepository } from '../bot-event-repository.js';
 import { BotInstanceRepository } from '../bot-instance-repository.js';
@@ -12,6 +16,7 @@ import { WorkspaceRepository } from '../workspace-repository.js';
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  closeTrackedDatabaseClients();
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 

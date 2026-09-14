@@ -69,12 +69,12 @@ browserless_api_url=${BROWSERLESS_API_URL:-}
 browserless_api_key=${BROWSERLESS_API_KEY:-}
 
 if [[ "$browserless_api_url" == "" ]]; then
-  echo "Missing BROWSERLESS_API_URL. This helper only supports remote Browserless in WeClaws." >&2
+  echo "Missing BROWSERLESS_API_URL. This helper only supports remote Browserless in weiling." >&2
   exit 1
 fi
 
 if [[ "$browserless_api_key" == "" ]]; then
-  echo "Missing BROWSERLESS_API_KEY. This helper only supports remote Browserless in WeClaws." >&2
+  echo "Missing BROWSERLESS_API_KEY. This helper only supports remote Browserless in weiling." >&2
   exit 1
 fi
 

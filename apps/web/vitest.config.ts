@@ -8,12 +8,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@/': fileURLToPath(new URL('./src/', import.meta.url)),
-      '@weclaws/db': fileURLToPath(new URL('../../packages/db/src/index.ts', import.meta.url)),
-      '@weclaws/shared/managed-skills': fileURLToPath(
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@weiling-ai/db': fileURLToPath(new URL('../../packages/db/src/index.ts', import.meta.url)),
+      '@weiling-ai/shared/managed-skills': fileURLToPath(
         new URL('../../packages/shared/src/managed-skills/index.ts', import.meta.url),
       ),
-      '@weclaws/shared': fileURLToPath(
+      '@weiling-ai/shared': fileURLToPath(
         new URL('../../packages/shared/src/index.ts', import.meta.url),
       ),
     },

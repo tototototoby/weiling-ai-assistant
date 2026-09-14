@@ -1,333 +1,173 @@
 <div align="center">
-  <img src="logo.png" alt="WeClaws logo" width="64" align="middle" />
-  <h2>
-    WeClaws
-  </h2>
-  <p><strong>一键部署、多用户、可长期托管的微信 AI 智能体控制台</strong></p>
+  <img src="assets/brand/wordmark-horizontal.svg" alt="微Link · 微灵 AI 助手" width="360" />
+  <p><strong>不用多学一个软件，在熟悉的聊天窗口里，把事情交给微Link。</strong></p>
   <p>
-    <a href="https://github.com/yokingma/weclaws"><img alt="GitHub stars" src="https://img.shields.io/github/stars/yokingma/weclaws?style=social" /></a>
-    <a href="https://www.npmjs.com/package/@fastagent/cli"><img alt="@fastagent/cli" src="https://img.shields.io/npm/v/%40fastagent%2Fcli?label=%40fastagent%2Fcli" /></a>
-    <a href="https://www.npmjs.com/package/@fastagent/sandbox-runtime"><img alt="@fastagent/sandbox-runtime" src="https://img.shields.io/npm/v/%40fastagent%2Fsandbox-runtime?label=%40fastagent%2Fsandbox-runtime" /></a>
-    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green.svg" /></a>
+    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-69b7e8.svg" /></a>
+    <a href="https://nodejs.org/"><img alt="Node.js 20+" src="https://img.shields.io/badge/node-20%2B-8ac6a0.svg" /></a>
+    <a href="https://www.docker.com/"><img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-7bb9e8.svg" /></a>
+    <a href="README_EN.md"><img alt="English" src="https://img.shields.io/badge/README-English-9aa9bd.svg" /></a>
   </p>
 </div>
 
 <p align="center">
-  <img src="assets/poster.jpg" alt="WeClaws Web管理面板" width="100%" />
+  <img src="assets/brand/hero-1600x600.png" alt="微Link：从聊天窗口交代任务，到服务端沙箱返回结果" width="100%" />
 </p>
 
-WeClaws 是一个面向 **团队、多账号、按用户沙盒隔离和长期运行** 场景的微信 AI 智能体控制台。它把微信通道、工具调用、Skills、MCP、记忆、定时任务和沙盒能力，包装成一个可通过 Web 管理、可多用户注册、可持续托管的控制面。
+> 微Link是一个自托管、多用户的 AI 助理控制面：把聊天通道、模型、Skills、MCP、记忆、提醒和沙箱执行组织在一起，让一个人可以随时交代，多个人可以各自使用，一台服务可以持续托管。
 
-> Self-hosted WeChat AI agent control plane for teams that need multi-user access, per-user sandbox isolation, and long-running operations. It packages WeChat connectivity, tool calling, Skills, MCP, memory, scheduled tasks, and sandboxed execution into a web-managed, multi-user platform for durable hosting.
+## 先说人话
 
-如果你要的不是“本地手工跑一个机器人脚本”，而是“部署一次后，让多个用户各自管理、分享、登录并长期运行自己的微信 AI 机器人”，WeClaws 更接近这个答案。
+你不需要先学会一个新软件。
 
-- [3 分钟快速开始](#快速开始)
-- [Docker Compose 一键部署](#docker-compose-一键部署)
-- [查看项目分工](#weclaws-和-fastagent-的分工)
-- [托管技能清单](#托管技能同步)
-- [部署与运维文档](docs/manuals/README.md)
+在哪个聊天工具里顺手，就从哪里开始：微信里发一句话，飞书里补充上下文，回到网页查看结果。适合托管的工作放到服务端自己的沙箱里，电脑睡着了，任务也不必跟着睡着。它还会记住目标、主动问进展；早上告诉你天气和安排，下雨时提前提醒你想想午饭。
 
-如果这个方向对你有帮助，欢迎点个 Star，后续功能和部署实践会持续公开。
+微Link最初只是一个有点可爱的想法：七月中旬，我们想通过微信 iLink 接口养一只大家都愿意用的生活助理“小龙虾”，帮人排排日程、查查资讯。真实使用之后，问题一个个冒出来，项目也一点点长成了现在这个能接入多端、能持续办事的 AI 助理。
+
+## 它能帮你什么
+
+| 零门槛 | 跨端记忆 | 持续办事 | 会跟进 |
+| --- | --- | --- | --- |
+| 扫码领取微Link，无需先安装一套新客户端。 | 微信、企业微信、飞书和网页可以围绕同一个 Bot 继续对话（需完成对应通道配置）。 | 工作在服务端独立沙箱里执行，不依赖你的工作电脑一直开机。 | 记住目标，在合适的时间主动提醒；收到你的回复后，再整理最新状态和下一步。 |
+
+## 一个很具体的例子
+
+出门路上，你发一条语音：“帮我做一张活动海报，主题是周五下午茶，清爽一点。”
+
+微Link在服务端沙箱里准备素材、生成页面并导出图片；到工位时，你看到的不是“我还在思考”，而是一张可以继续修改、发送和使用的海报。
 
 <p align="center">
-  <img src="assets/wechat_1.jpg" alt="WeClaws 微信通道应用效果 1" width="48%" />
-  <img src="assets/wechat_2.jpg" alt="WeClaws 微信通道应用效果 2" width="48%" />
+  <img src="assets/demo/voice-to-poster.gif" alt="语音指令到海报结果的流程动画" width="86%" />
 </p>
 
-## 为什么值得关注
+这只是一个演示。文件整理、资讯检索、天气与日程、日报准备、网页任务和团队协作，都可以用同一套“交代—执行—回传—跟进”的方式接入。
 
-- **它是控制台，不是单机脚本。** WeClaws 提供用户账号、邀请码注册、模型配置、Bot 管理、Bot 快速分享、状态刷新和 Web 入口，适合真正交给多人使用。
-- **它面向长期运行，不是一次性演示。** 启动、扫码登录、运行状态、异常可见、重启和 supervisor 收敛都围绕持续托管设计。
-- **它强调隔离，不把所有 Bot 塞进同一执行环境。** `@fastagent/sandbox-runtime` 为不同用户准备独立的远程沙盒，降低工具执行互相影响的风险。
-- **它不是重造 AI 运行时。** `@fastagent/cli` 继续负责真正的微信对话和工具执行，WeClaws 专注多用户控制面和运维体验。
+## 为什么它和单机助手不太一样
 
-## 适合谁
+这里不拿未经验证的跑分或竞品数据做比较，只说部署形态上的差异：
 
-WeClaws 适合想把微信智能体从“手工命令行实验”升级成“可交付、可托管、可多人使用服务”的团队或个人：
-
-- 你想部署一次，就让多个用户在网页里创建和管理自己的机器人。
-- 你要给团队成员、客户或不同业务账号分别分配独立的微信 Bot。
-- 你需要扫码登录、状态实时刷新、异常可见、实例可重启，而不是靠手工盯日志。
-- 你希望把 Bot 通过二维码公开分享出去，让别人打开页面后直接扫码领取当前可用机器人。
-- 你希望每个用户都有自己的模型配置、工作区和运行状态，而不是共用一套宿主机上下文。
-- 你想保留 FastAgent 引擎的完整能力，同时给非工程用户一个 Web 管理入口。
-
-## 典型使用场景
-
-- 在云服务器上 self-host 一个多用户微信 AI 助手平台，供内部团队长期使用。
-- 为多个运营、销售、客服或项目成员分配各自独立的微信机器人。
-- 为单个 Bot 生成公开二维码分享页，别人无需登录 WeClaws 也能打开并在等待扫码时直接领取。
-- 让不同机器人绑定不同模型服务商、模型版本和 API 密钥，避免全局环境变量绑死。
-- 通过 Docker Compose 一次拉起网页、supervisor、沙盒运行时和 `browserless`，降低部署门槛。
-
-## 你能用它做什么
-
-- 在网页控制台创建和管理多个微信智能体机器人。
-- 支持首个管理员自举、邀请码注册和多用户账号体系。
-- 为每个用户保存多条模型服务配置，让不同机器人绑定不同服务商、模型和 API 密钥。
-- 启动机器人后展示微信扫码登录二维码，登录状态通过 SSE 实时刷新。
-- 支持 Bot 二维码公开分享，别人打开分享页后可在 Bot 等待扫码时直接扫码领取，且分享页会自动刷新到最新二维码。
-- 停止、重启、查看运行状态，由 supervisor 统一管理实例生命周期。
-- 用 SQLite 保存用户、机器人、模型配置、运行意图和状态，不把内存当作事实来源。
-- 按用户分配远程沙盒进程池，让机器人在隔离环境中使用工具。
-- 同步和管理 WeClaws 托管的技能包，同时保留用户自己的技能。
-- 通过 Docker Compose 快速部署网页、supervisor、沙盒运行时和 `browserless` 四个服务。
-
-<p align="center">
-  <img src="assets/screenshot_1.png" alt="WeClaws Web管理面板截屏" width="100%" />
-</p>
-
-## 模型服务支持
-
-WeClaws 不把模型服务写死在系统环境变量里。每个用户都可以在网页里创建多条模型配置，每条配置包含服务商、模型名、API 密钥、可选网关地址和接口类型；创建机器人时显式选择其中一条，之后也可以为单个机器人切换配置。也就是说，同一个用户可以让不同机器人分别使用 OpenAI、Anthropic、Google Gemini，或其他兼容接口的模型服务。
-
-当前接口类型支持：
-
-- `anthropic-messages`
-- `openai-completions`
-- `openai-responses`
-- `google-generative-ai`
-
-FastAgent CLI 还对 OpenAI Chat Completions 兼容接口下的 Kimi K2（`kimi-k2*`）和小米 MiMo（`mimo-v2*`）模型做了多轮工具调用兼容处理，适合接入 Kimi、小米等兼容网关。
-
-## 背后的执行能力
-
-WeClaws 基于 [`@fastagent/cli`](https://www.npmjs.com/package/@fastagent/cli) 和 [`@fastagent/sandbox-runtime`](https://www.npmjs.com/package/@fastagent/sandbox-runtime) 构建。具体版本、升级节奏和最新能力说明，建议直接查看对应 npm 页面或仓库内的版本矩阵手册。
-
-[`@fastagent/cli`](https://www.npmjs.com/package/@fastagent/cli) 是用户真正使用的智能体运行时，更完整的命令、配置和能力说明可以查看它的 npm 页面。当前公开能力包括：
-
-- 微信通道：扫码登录、登录态恢复、接收文本/图片/语音/文件，发送媒体和文件。
-- 工具能力：读取、写入、编辑、搜索文件，执行命令，管理进程。
-- MCP：接入外部工具，读取资源，管理全局 MCP 服务。
-- 技能：安装、发现、列出，并在运行时调用技能。
-- 模型服务：支持多种接口类型，可通过不同配置接入不同服务商和兼容网关。
-- 长会话能力：记忆召回与沉淀、上下文自动压缩、后台记忆整理。
-- 自动化能力：会话级定时任务，后台任务查看、等待和停止。
-- 沙盒模式：支持本地沙盒和远程沙盒。
-- 机器可读事件：通过 `--output jsonl` 输出事件流，让 WeClaws 能可靠解析二维码、登录、运行和错误状态。
-
-如果你只想直接体验 FastAgent 命令行工具，可以单独安装：
-
-```bash
-npm install -g @fastagent/cli
-fastagent --help
-fastagent doctor
-fastagent --channel weixin
-```
-
-如果你想把它变成多人网页服务，再使用 WeClaws。
-
-`@fastagent/sandbox-runtime` 提供多用户沙盒运行时和进程池管理。WeClaws 用它为不同用户准备独立的远程执行环境，降低账号、文件和工具执行互相影响的风险。
-
-## 沙盒镜像内置环境
-
-默认 Compose 会构建 `sandbox-runtime` 镜像。镜像里的工具是在构建阶段预装的，方便机器人在远程沙盒里处理常见任务，不需要每个用户重复安装。
-
-<p align="center">
-  <img src="assets/screenshot_2.png" alt="WeClaws 沙盒环境监控截图" width="100%" />
-</p>
-
-当前内置环境包括：
-
-- Node.js 20 运行环境。
-- JavaScript / TypeScript 工具链：`bun`、`pnpm`。
-- Python 工具链：`python3`、`uv`。
-- 常用系统工具：`bash`、`curl`、`git`、`gh`、`ripgrep`、`jq`、`file`、`zip`、`unzip`、`socat`、`procps`。
-- 飞书 / Lark 官方 CLI：`lark-cli`。
-- 构建工具：`make`、`g++`。
-- 媒体处理：`ffmpeg`。
-- 文档和文本提取：`pdftotext`、`pdfinfo`、`pandoc`。
-- 沙盒基础：`bubblewrap` 和 `@fastagent/sandbox-runtime`。
-- 浏览器自动化：镜像已预置 `agent-browser` 客户端，默认 Compose 还会提供 `browserless` sidecar；受支持路径是由沙盒内 `agent-browser -p browserless` 或显式远程 `--cdp` 连接远程浏览器后端，不支持本地启动浏览器；少量一次性截图、PDF、scrape 任务也可以直接走 Browserless。
-
-用户 API 密钥、OAuth token、微信登录态、设备配对态等个性化状态不会被打进镜像，仍然需要通过运行时配置或外部状态注入。
-
-## 托管技能同步
-
-WeClaws 内置一组官方托管技能，来源位于 `resources/skills/managed`。这些技能会同步到每个机器人实例的 `data/skills` 目录，供 FastAgent CLI 在运行时读取。
-
-完整同步策略、目录标记和维护规则见 [托管技能手册](docs/manuals/managed-skills.md)。
-
-策略摘要：
-
-- `resources/skills/managed/manifest.json` 是默认同步清单的唯一来源。
-- supervisor 在启动机器人前会尝试同步一次；同步失败或已有同步锁时，不阻断机器人启动。
-- 机器人详情页也提供手动 `Sync Skills` 入口，只触发托管技能同步，不附带重启语义。
-- 只托管实例级 `data/skills`，不会修改用户自管的 `workspace/.fastagent/skills`。
-- 如果目标目录已有同名但没有 WeClaws 托管标记的技能，会保留用户内容并跳过。
-
-当前默认同步的技能：
-
-| 技能 | 用途 | 主要依赖 |
+|  | 本地单机任务模式 | 微Link的服务端托管模式 |
 | --- | --- | --- |
-| `weather` | 查询天气和预报 | `curl` |
-| `github` | 通过 GitHub CLI 处理仓库、Issue、PR、CI | `gh` |
-| `skill-creator` | 创建、编辑、校验和打包 FastAgent 技能 | `python3` |
-| `video-frames` | 用 ffmpeg 从视频中截帧或生成检查图 | `ffmpeg` |
-| `personal-planner` | 面向复杂任务的先规划、再执行工作流 | 无额外命令依赖 |
-| `agent-browser` | 浏览器自动化技能说明已收编，默认走 Browserless sidecar | `agent-browser`、Browserless sidecar |
-| `lark-*`（24 skills） | 官方公开的 Feishu/Lark 技能包，覆盖 IM、日历、文档、Drive、Sheets、Slides、Base、Task、Mail、Wiki、会议纪要、OKR、审批等域能力 | `lark-cli` |
-| `ppt-skill` | 生成 HTML 网页 PPT，并交付本地可预览的 deck 资源目录 | `node` |
-| `editorial-card-screenshot` | 生成 editorial 风格信息卡，并通过远程 Browserless 导出 PNG | `curl`、`python3`、Browserless sidecar |
+| 开始使用 | 通常需要先安装、配置和学习工具 | 聊天窗口或网页即可开始，扫码领取 Bot |
+| 技能 | 往往从零搭建自己的提示词和工具链 | 可预置一组工作技能，再按用户需要调整 |
+| 电脑状态 | 依赖本机进程；休眠或关机可能暂停 | 任务在服务端独立运行，电脑可以离开 |
+| 多用户 | 更像一个人一套环境 | 一台服务承载多个用户，每个用户有自己的上下文和工作区 |
+| 跟进 | 任务完成后通常需要人再来问 | 可以持久化目标、安排提醒并记录投递状态 |
 
-技能是否真正可用，还取决于运行环境里是否具备对应命令和授权。例如 GitHub 技能需要可用的 `gh` 认证上下文；`lark-*` 技能依赖 bot 自己完成 `lark-cli` 的应用配置与授权；`ppt-skill` 依赖 `node` 执行校验脚本；`editorial-card-screenshot` 的截图导出依赖 Browserless 远程路径；用户级密钥和 OAuth 状态不会内置进镜像。
+“多用户”和“隔离”不是一句宣传词就自动成立：微Link提供按用户/Bot 划分的数据库记录、实例路径和沙箱池，但部署者仍需保护宿主机、密钥和管理入口。边界与限制见 [安全模型](docs/security-model.md)。
 
-## WeClaws 和 FastAgent 的分工
+## 当前能力
 
-| 层级 | 负责什么 | 不负责什么 |
-| --- | --- | --- |
-| `@fastagent/cli` | 智能体运行时、微信通道、工具调用、技能、MCP、记忆、定时任务、沙盒参数、JSONL 事件 | 多用户网页管理、账号权限、实例数据库、页面状态 |
-| `@fastagent/sandbox-runtime` | 多用户远程沙盒、进程池、隔离执行环境 | 网页控制台、机器人生命周期、业务数据库 |
-| `apps/supervisor` | 读取数据库里的运行意图，启动/停止 FastAgent 子进程，注入实例环境变量，消费事件并落库 | 网页界面、认证、用户交互 |
-| `apps/web` | 控制台、HTTP 接口、Better Auth、SSE、机器人/模型配置管理、技能同步入口 | 直接拉起本地进程、直接持有运行态真相 |
-| `packages/db` | SQLite 结构、迁移、仓储 API、持久化语义 | 业务界面、外部运行时 |
-| `packages/shared` | 跨工作区的稳定类型、路径规则、JSONL 结构 | 各工作区的内部实现 |
+- Web 控制台：账号、邀请码、模型配置、Bot 创建、启动/停止/重启、状态流和技能同步。
+- 微信通道：由 FastAgent 负责扫码登录和消息收发；具体可用性取决于运行时版本与微信侧状态。
+- 企业微信通道：基于官方 Bot WebSocket 连接；管理员绑定员工身份后，可用于持续收发和主动投递。
+- 飞书通道：通过 `lark-cli` 接入私聊与群聊；是否能使用某项能力取决于飞书应用权限和本地授权。
+- 持久化：SQLite 保存账号、Bot、模型配置、运行意图、通道配置和投递状态。
+- 执行：Supervisor 负责进程生命周期与状态收敛；FastAgent 负责智能体运行；sandbox-runtime 负责远程沙箱进程池。
+- 技能与工具：内置天气、GitHub、文件处理、浏览器、PDF/Office、飞书/Lark、海报等托管技能；PPT 等额外能力可在核对许可证后外部安装。
+- 提醒与晨报：支持会话级定时任务、主动投递和可配置的晨报能力；通道没有主动投递权限时会记录失败原因。
 
-核心原则：网页只写入“用户想让机器人运行”的持久化意图；supervisor 才拥有运行时；FastAgent CLI 才是真正执行智能体的进程。
+### 支持状态怎么理解
 
-```mermaid
-flowchart LR
-  U[用户] --> W[WeClaws 网页]
-  W --> DB[(SQLite)]
-  S[Supervisor] --> DB
-  S --> F[FastAgent 子进程]
-  F --> WX[微信]
-  F --> RT[沙盒运行时]
-  F --> EV[JSONL 事件]
-  EV --> S
-  S --> DB
-  W --> SSE[SSE 状态]
-```
+三端已经有对应的实现和测试，但“能跑”不等于你的部署已经完成授权。公开发布前请按 [通道验收清单](docs/getting-started.md#上线前验收) 做一次真实端到端验证；文档中的“支持”默认指“代码提供接入路径”，不是平台官方背书，也不是在所有账号、区域和版本下都保证可用。
 
-## 快速开始
+## 架构一眼看懂
 
-### 本地开发
+网页只写入“我希望这个 Bot 运行”的持久化意图，Supervisor 负责把意图收敛成运行状态，FastAgent 才是实际执行智能体的进程。每个用户/Bot 的工作区、会话和沙箱凭据按实例隔离。
 
-要求：
+<p align="center">
+  <img src="assets/diagrams/architecture.svg" alt="微Link服务端托管架构" width="94%" />
+</p>
 
-- Node.js 20+
-- pnpm
-- 一个可用的模型服务 API 密钥，登录后在网页控制台创建用户级模型配置
+更完整的请求流、状态流、目录边界和故障恢复说明见 [架构说明](docs/architecture.md) 与 [共享上下文](docs/shared-context.md)。
+
+## 五分钟跑起来
+
+### 方式 A：本地开发
+
+准备 Node.js 20+、pnpm 9 和一个可用的模型服务密钥。仓库中的 `.env.example` 只有占位值，不包含真实凭据。
 
 ```bash
 pnpm install
+pnpm prepare:fastagent
 cp .env.example .env
 pnpm db:generate
 pnpm db:migrate
-```
-
-首次启动前确认仓库根 `.env` 存在，并把 `BETTER_AUTH_SECRET=replace-me` 改成随机密钥，例如 `openssl rand -hex 32` 的输出；缺少根 `.env` 会导致 web 运行时报 `DATABASE_URL` / `APP_BASE_URL` / `BETTER_AUTH_SECRET` 缺失。
-
-分别启动网页和 supervisor：
-
-```bash
 pnpm dev:web
 pnpm dev:supervisor
 ```
 
-打开 `http://localhost:3000`，注册/登录后：
+打开 <http://localhost:3000>，完成首个管理员注册后：
 
-1. 创建一条或多条模型配置。
-2. 创建机器人并绑定模型配置。
-3. 启动机器人。
-4. 扫描页面展示的微信二维码完成登录。
+1. 在设置里创建一条模型配置。
+2. 创建一个 Bot，并绑定该模型配置。
+3. 启动 Bot，按页面提示扫码登录微信；企业微信和飞书按对应教程完成授权。
+4. 发一条短消息验证回复，再做一次“关掉本地终端后任务仍在服务端继续”的托管验证。
 
-### Docker Compose 一键部署
+Windows 用户可以使用 WSL2 或 Linux 容器运行 Docker；`cp` 可替换为 PowerShell 的 `Copy-Item .env.example .env`。
 
-默认 Compose 栈包含网页、supervisor、sandbox-runtime 和 `browserless` 四个服务。复制环境文件后，一条命令即可拉起：
+### 方式 B：Docker Compose
 
 ```bash
 cp infra/compose/.env.example infra/compose/.env
+# 编辑 infra/compose/.env，至少修改 APP_BASE_URL、BETTER_AUTH_SECRET、BROWSERLESS_TOKEN
 docker compose --env-file infra/compose/.env -f infra/compose/docker-compose.yml up -d
+docker compose --env-file infra/compose/.env -f infra/compose/docker-compose.yml ps
 ```
 
-生产部署可以直接使用已发布镜像，不需要在服务器上构建：
+基础命令只启动 Web、Supervisor 和 sandbox-runtime。需要网页自动化、截图、PDF 或“语音做海报”演示时，再显式启用固定版本的可选 Browserless：
 
 ```bash
-docker compose \
-  --env-file infra/compose/.env \
-  -f infra/compose/docker-compose.yml \
-  -f infra/compose/docker-compose.prod.yml \
-  pull
-
-docker compose \
-  --env-file infra/compose/.env \
-  -f infra/compose/docker-compose.yml \
-  -f infra/compose/docker-compose.prod.yml \
-  up -d
+docker compose --profile browserless --env-file infra/compose/.env -f infra/compose/docker-compose.yml up -d
 ```
 
-生产环境至少确认：
+生产环境使用绑定目录和版本化镜像时，参照 [Docker Compose 部署](docs/deployment/docker-compose.md)。首次公开版本不把离线镜像包提交进 Git；镜像是否发布到 GHCR 以依赖许可审计结果为准。
 
-- `APP_BASE_URL` 和实际访问地址一致。
-- `BETTER_AUTH_SECRET` 已替换成真实随机密钥。
-- `WEB_ADMIN_EMAILS` 填写首个管理员邮箱；首次注册命中该邮箱时可以完成管理员自举。
-- 使用生产覆盖配置时，`WECLAWS_DATA_ROOT` 指向宿主机上的持久化目录；建议使用 `/srv/weclaws/data` 这类标准服务目录，避免路径里出现个人用户名、临时项目名等宿主机细节。
-- 用户登录后必须创建模型配置，并让机器人绑定该配置；仓库级 `FASTAGENT_*` 环境变量不再作为机器人默认模型来源。
-
-上线后的基本路径是：
-
-1. 首个管理员用 `WEB_ADMIN_EMAILS` 中的邮箱完成注册。
-2. 管理员在后台生成邀请码。
-3. 普通用户用邀请码注册账号。
-4. 用户创建模型配置和机器人，扫码登录微信后即可运行。
+### 必须先改的配置
 
 ```dotenv
-WECLAWS_DATA_ROOT=/srv/weclaws/data
+APP_BASE_URL=https://your-domain.example
+BETTER_AUTH_SECRET=<a-long-random-secret>
+WEB_ADMIN_EMAILS=admin@example.com
 ```
 
-完整部署说明见 [Docker 部署手册](docs/manuals/docker-deployment-runbook.md)。
+启用 `browserless` Profile 时还必须设置 `BROWSERLESS_TOKEN=<a-long-random-token>`。
 
-## 项目结构
+不要把 `.env`、`storage/`、Bot 登录态、二维码、模型 API Key 或通道 Secret 提交到 Git。生产环境请读 [生产加固](docs/deployment/production-hardening.md) 和 [安全模型](docs/security-model.md)。
 
-```text
-apps/
-  web/          Next.js 控制台、接口、认证、SSE
-  supervisor/  FastAgent 子进程管理和状态收敛
-packages/
-  db/          SQLite / Drizzle 结构、迁移、仓储 API
-  shared/      跨工作区的契约、常量、路径和 JSONL 结构
-infra/
-  compose/     Docker Compose 拓扑和生产覆盖配置
-  docker/      网页、supervisor、sandbox-runtime 镜像
-docs/manuals/  稳定的运维、契约、环境变量和部署文档
-resources/
-  skills/      WeClaws 托管技能包
-```
+## 文档地图
 
-## 常用开发命令
+| 想做什么 | 从这里开始 |
+| --- | --- |
+| 第一次运行 | [上手指南](docs/getting-started.md) |
+| 理解系统 | [架构说明](docs/architecture.md)、[共享上下文](docs/shared-context.md) |
+| 配置模型、路径和密钥 | [配置参考](docs/configuration.md) |
+| 接入三端 | [微信](docs/channels/wechat.md)、[企业微信](docs/channels/wecom.md)、[飞书](docs/channels/feishu.md) |
+| 部署到服务器 | [Docker Compose](docs/deployment/docker-compose.md)、[反向代理与 TLS](docs/deployment/reverse-proxy-and-tls.md) |
+| 让它做一件事 | [扫码领取](docs/tutorials/claim-your-assistant-by-qr.md)、[语音做海报](docs/tutorials/voice-to-poster.md)、[主动提醒](docs/tutorials/proactive-reminders.md) |
+| 长期运维 | [备份恢复](docs/operations/backup-and-restore.md)、[升级回滚](docs/operations/upgrade-and-rollback.md)、[监控](docs/operations/monitoring.md) |
+| 出问题或想贡献 | [排障](docs/troubleshooting.md)、[FAQ](docs/faq.md)、[贡献指南](CONTRIBUTING.md) |
 
-```bash
-pnpm test
-pnpm typecheck
-pnpm lint
-pnpm --filter @weclaws/web test
-pnpm --filter @weclaws/supervisor test
-pnpm --filter @weclaws/db test
-pnpm test:fastagent-contract
-```
+## 视觉与演示素材
 
-`pnpm test:fastagent-contract` 只在具备所需 FastAgent/模型服务环境时运行。
+README 中的 Hero、架构图、流程图和产品截图都应来自 `assets/`，且在公开前完成脱敏。二维码、聊天记录、邮箱、内网地址、Cookie、Token 和客户文件名都不能进入图片或 GIF。素材命名约定见 [素材清单](docs/README.md#公开素材清单)。
 
-## 设计原则
+## Roadmap
 
-- SQLite 是控制面的事实来源。
-- 网页不直接管理本地进程，只写入持久化运行意图。
-- Supervisor 拥有运行时，负责持续收敛状态。
-- FastAgent CLI 通过外部契约接入，不依赖它的内部包结构。
-- 机器人路径通过共享路径解析器派生，不持久化宿主机特定路径。
-- 不为已经退役的行为添加兼容层，除非明确需要。
+- [ ] 更完整的跨端上下文审计与可视化
+- [ ] 通道连接健康检查和更清晰的投递失败恢复
+- [ ] 可选的 Docker Secrets / 外部密钥存储
+- [ ] 更细的沙箱策略模板与高隔离部署示例
+- [ ] 经过许可证核准后的版本化 GHCR 镜像和离线安装包
+- [ ] 英文教程与更多社区贡献的 Skill
 
-## 更多文档
+欢迎用 Issue 讲清楚你想让微Link替你做什么，也欢迎提交一个小而完整的 Skill。
 
-- [FastAgent CLI 接入契约](docs/manuals/fastagent-cli-contract.md)
-- [Docker 部署手册](docs/manuals/docker-deployment-runbook.md)
-- [环境变量和密钥矩阵](docs/manuals/env-and-secrets-matrix.md)
-- [托管技能手册](docs/manuals/managed-skills.md)
-- [版本矩阵](docs/manuals/version-matrix.md)
-- [文档索引](docs/manuals/README.md)
+## 独立项目声明
+
+`微Link · 微灵 AI 助手` 是独立开源项目，与华为 WeLink、腾讯微信/企业微信、飞书/Lark 或其关联公司不存在隶属、授权、赞助或官方合作关系。项目使用这些平台公开提供的接口或客户端能力；平台名称和商标归其各自权利人所有。使用前请阅读对应平台的服务条款、开发者政策和账号安全要求。
+
+本项目由 WeClaws 演进而来，原始项目和贡献归属说明见 [UPSTREAM.md](UPSTREAM.md)。
 
 ## 许可证
 
-[MIT](LICENSE)
+应用代码采用 [MIT License](LICENSE)。FastAgent、sandbox-runtime、Browserless、Lark CLI、企业微信 SDK、托管技能和基础镜像分别遵循各自许可，详见 [第三方许可说明](THIRD_PARTY_NOTICES.md)。

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-export const SRT_POOL_STATUS_FILE_VERSION = 1;
+export const SRT_POOL_STATUS_FILE_VERSION = 2;
 
 export async function writeStatusFile(statusFilePath, status) {
   await mkdir(dirname(statusFilePath), { recursive: true });
@@ -11,29 +11,34 @@ export async function writeStatusFile(statusFilePath, status) {
   await rename(tempFile, statusFilePath);
 }
 
-export function createStatusDocument({ children, lastErrorMessage, now, pools }) {
+export function createStatusDocument({ children, lastErrorMessage, managerResourceUsage = null, now, pools }) {
   const poolStatuses = pools.map((pool) => {
-    const child = children.get(pool.ownerUserId);
+    const child = children.get(pool.botInstanceId);
     const processAlive = child && child.child.exitCode == null && child.child.signalCode == null;
     const state = resolvePoolState(pool, child);
 
     return {
       activeSessions: child?.poolStats?.activeSessions ?? null,
+      botInstanceId: pool.botInstanceId,
       busyProcesses: child?.poolStats?.busyProcesses ?? null,
-      cpuPercent: child?.resourceUsage?.cpuPercent ?? null,
+      capacityDeficitSince: child?.capacityDeficitSince ?? null,
+      cpuPercent: processAlive ? child?.resourceUsage?.cpuPercent ?? null : null,
+      errorProcesses: child?.poolStats?.errorProcesses ?? null,
       lastErrorMessage: child?.lastErrorMessage ?? null,
       lastExitCode: child?.lastExitCode ?? null,
       lastHealthAt: child?.lastHealthAt ?? null,
       lastRestartAt: child?.lastRestartAt ?? null,
-      ownerUserId: pool.ownerUserId,
       pid: processAlive ? child.child.pid ?? null : null,
       poolSize: pool.poolSize,
       portRangeEnd: pool.portRangeEnd,
       portRangeStart: pool.portRangeStart,
       readyProcesses: child?.poolStats?.readyProcesses ?? null,
-      rssBytes: child?.resourceUsage?.rssBytes ?? null,
+      restartNotBefore: child?.restartNotBefore ?? null,
+      rssBytes: processAlive ? child?.resourceUsage?.rssBytes ?? null : null,
       startedAt: processAlive ? child.startedAt : null,
       state,
+      terminalProcessCount: child?.poolStats?.terminalProcessCount ?? null,
+      totalProcesses: child?.poolStats?.totalProcesses ?? null,
       url: pool.url,
     };
   });
@@ -51,14 +56,14 @@ export function createStatusDocument({ children, lastErrorMessage, now, pools })
 
   return {
     manager: {
-      cpuPercent: null,
+      cpuPercent: managerResourceUsage?.cpuPercent ?? null,
       degradedPoolCount,
       failedPoolCount,
       lastErrorMessage,
       lastReconcileAt: now,
       managedPoolCount: pools.length,
       pid: process.pid,
-      rssBytes: process.memoryUsage().rss,
+      rssBytes: managerResourceUsage?.rssBytes ?? process.memoryUsage().rss,
       runningPoolCount,
       state: failedPoolCount > 0 || degradedPoolCount > 0 || lastErrorMessage ? 'degraded' : 'running',
       totalActiveSessions,

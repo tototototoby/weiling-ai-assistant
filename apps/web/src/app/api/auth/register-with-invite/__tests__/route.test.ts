@@ -14,8 +14,6 @@ const {
   findBootstrapClaimByTokenMock,
   releaseBootstrapClaimMock,
   isAdminEmailMock,
-  ensureUserSandboxRuntimePoolMock,
-  srtPoolDefaults,
 } = vi.hoisted(() => ({
   signUpEmailMock: vi.fn(),
   countAllUsersMock: vi.fn(),
@@ -26,23 +24,6 @@ const {
   findBootstrapClaimByTokenMock: vi.fn(),
   releaseBootstrapClaimMock: vi.fn(),
   isAdminEmailMock: vi.fn(),
-  ensureUserSandboxRuntimePoolMock: vi.fn(),
-  srtPoolDefaults: {
-    defaultAllowRead: [],
-    defaultAllowWrite: ['/tmp'],
-    defaultDeniedDomains: [],
-    defaultDenyRead: ['/etc/passwd'],
-    defaultDenyWrite: ['.env'],
-    healthCheckIntervalMs: 60_000,
-    maxConcurrentInit: 1,
-    minReadyProcesses: 1,
-    poolSize: 3,
-    portBase: 31_000,
-    portRangeWidth: 100,
-    proxyPortBase: 9_100,
-    sessionTimeoutMs: 600_000,
-    workspaceBaseRoot: '/app/apps/sandbox-runtime/user-workspaces',
-  },
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -57,19 +38,10 @@ vi.mock('@/lib/admin', () => ({
   isAdminEmail: isAdminEmailMock,
 }));
 
-vi.mock('@/lib/env', () => ({
-  getEnv: () => ({
-    srtPoolDefaults,
-  }),
-}));
-
 vi.mock('@/lib/repositories', () => ({
   getRepositories: () => ({
     users: {
       countAll: countAllUsersMock,
-    },
-    userSandboxRuntimePools: {
-      ensureForUser: ensureUserSandboxRuntimePoolMock,
     },
     registrationBootstrapClaims: {
       claim: claimBootstrapMock,
@@ -91,9 +63,6 @@ describe('/api/auth/register-with-invite route', () => {
     countAllUsersMock.mockResolvedValue(1);
     isAdminEmailMock.mockReturnValue(false);
     claimBootstrapMock.mockResolvedValue(null);
-    ensureUserSandboxRuntimePoolMock.mockResolvedValue({
-      ownerUserId: 'user_1',
-    });
   });
 
   it('rejects invalid payloads', async () => {
@@ -156,10 +125,6 @@ describe('/api/auth/register-with-invite route', () => {
     expect(reserveMock).not.toHaveBeenCalled();
     expect(consumeReservationMock).not.toHaveBeenCalled();
     expect(releaseReservationMock).not.toHaveBeenCalled();
-    expect(ensureUserSandboxRuntimePoolMock).toHaveBeenCalledWith({
-      defaults: srtPoolDefaults,
-      ownerUserId: 'user_1',
-    });
     expect(signUpEmailMock).toHaveBeenCalledWith(expect.objectContaining({
       asResponse: true,
       body: {
@@ -364,10 +329,6 @@ describe('/api/auth/register-with-invite route', () => {
       reservationToken: reservedToken,
       usedByUserId: 'user_1',
     }));
-    expect(ensureUserSandboxRuntimePoolMock).toHaveBeenCalledWith({
-      defaults: srtPoolDefaults,
-      ownerUserId: 'user_1',
-    });
     expect(releaseReservationMock).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
     expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=abc123');
@@ -381,66 +342,6 @@ describe('/api/auth/register-with-invite route', () => {
       },
       error: null,
     });
-  });
-
-  it('keeps registration successful when user sandbox runtime pool provisioning fails after invite consumption', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    reserveMock.mockResolvedValue({
-      code: 'VALID-CODE',
-      reservationToken: 'reservation_1',
-      reservedAt: new Date('2026-04-02T00:00:00.000Z'),
-      reservedByEmail: 'bot@example.com',
-      usedAt: null,
-      usedByUserId: null,
-    });
-    signUpEmailMock.mockResolvedValue(new Response(JSON.stringify({
-      token: null,
-      user: {
-        id: 'user_1',
-        email: 'bot@example.com',
-        name: 'bot',
-      },
-    }), {
-      status: 200,
-      headers: {
-        'content-type': 'application/json',
-        'set-cookie': 'better-auth.session_token=abc123; Path=/; HttpOnly',
-      },
-    }));
-    consumeReservationMock.mockResolvedValue({
-      code: 'VALID-CODE',
-      reservationToken: null,
-      reservedAt: null,
-      reservedByEmail: null,
-      usedAt: new Date('2026-04-02T00:00:00.000Z'),
-      usedByUserId: 'user_1',
-    });
-    ensureUserSandboxRuntimePoolMock.mockRejectedValue(new Error('sqlite busy'));
-
-    const { POST } = await import('../route');
-
-    const response = await POST(
-      new Request('http://localhost/api/auth/register-with-invite', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          email: 'bot@example.com',
-          inviteCode: 'VALID-CODE',
-          password: 'password123',
-        }),
-      }),
-    );
-
-    expect(consumeReservationMock).toHaveBeenCalled();
-    expect(releaseReservationMock).not.toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to provision user sandbox runtime pool after registration.',
-      expect.objectContaining({
-        ownerUserId: 'user_1',
-      }),
-    );
-    consoleErrorSpy.mockRestore();
   });
 
   it('releases the reservation when Better Auth signup fails', async () => {

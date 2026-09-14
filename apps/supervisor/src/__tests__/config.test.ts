@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { chmod, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getSupervisorConfig } from '../config';
 
@@ -32,6 +33,7 @@ describe('getSupervisorConfig', () => {
         'FASTAGENT_DEFAULT_PROVIDER=openai',
         'INSTANCES_ROOT=./storage/instances-local-dev',
         'RECONCILE_INTERVAL_MS=4321',
+        'RECONCILE_STALL_TIMEOUT_MS=9876',
         'SRT_DEFAULT_MIN_READY_PROCESSES=2',
         'SRT_DEFAULT_POOL_SIZE=5',
       ].join('\n'),
@@ -46,6 +48,7 @@ describe('getSupervisorConfig', () => {
       fastagentBinaryPath,
       instancesRoot: join(dir, 'storage', 'instances-local-dev'),
       reconcileIntervalMs: 4321,
+      reconcileStallTimeoutMs: 9876,
       sandboxApiKey: null,
       sandboxUrl: null,
       srtPoolConfigFile: join(dir, 'storage', 'sandbox-runtime-private', 'srt-pools.json'),
@@ -133,6 +136,44 @@ describe('getSupervisorConfig', () => {
     expect(config).not.toHaveProperty('fastagentDefaultProvider');
   });
 
+  it('prefers WEILING runtime variables and falls back to their legacy names', () => {
+    const legacyConfig = getSupervisorConfig({
+      FASTAGENT_BINARY_PATH: '/tmp/fastagent',
+      FASTAGENT_SANDBOX_MODE: 'disabled',
+      WECLAWS_INTERNAL_API_TOKEN: 'legacy-token',
+      WECLAWS_INTERNAL_PORT: '8811',
+      WECLAWS_LARK_CLI_PATH: 'legacy-lark',
+      WECLAWS_LARK_CONFIG_ROOT: '/tmp/legacy-lark-config',
+    }, process.cwd());
+
+    expect(legacyConfig).toMatchObject({
+      internalApiToken: 'legacy-token',
+      internalPort: 8811,
+      larkCliPath: 'legacy-lark',
+      larkConfigRoot: '/tmp/legacy-lark-config',
+    });
+
+    const preferredConfig = getSupervisorConfig({
+      FASTAGENT_BINARY_PATH: '/tmp/fastagent',
+      FASTAGENT_SANDBOX_MODE: 'disabled',
+      WEILING_INTERNAL_API_TOKEN: 'preferred-token',
+      WEILING_INTERNAL_PORT: '8822',
+      WEILING_LARK_CLI_PATH: 'preferred-lark',
+      WEILING_LARK_CONFIG_ROOT: '/tmp/preferred-lark-config',
+      WECLAWS_INTERNAL_API_TOKEN: 'legacy-token',
+      WECLAWS_INTERNAL_PORT: '8811',
+      WECLAWS_LARK_CLI_PATH: 'legacy-lark',
+      WECLAWS_LARK_CONFIG_ROOT: '/tmp/legacy-lark-config',
+    }, process.cwd());
+
+    expect(preferredConfig).toMatchObject({
+      internalApiToken: 'preferred-token',
+      internalPort: 8822,
+      larkCliPath: 'preferred-lark',
+      larkConfigRoot: '/tmp/preferred-lark-config',
+    });
+  });
+
   it('allows disabled sandbox mode without requiring sandbox env variables', () => {
     const config = getSupervisorConfig({
       FASTAGENT_BINARY_PATH: '/tmp/fastagent',
@@ -156,8 +197,8 @@ describe('getSupervisorConfig', () => {
     expect(config).not.toHaveProperty('fastagentDefaultProvider');
   });
 
-  it('allows supervisor startup without global fastagent runtime defaults when bots will use user-scoped config', () => {
-    const workspaceRoot = join(process.cwd(), '../..');
+  it('allows supervisor startup without global fastagent runtime defaults when Bots use scoped config', () => {
+    const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
     const config = getSupervisorConfig({
       FASTAGENT_BINARY_PATH: '/tmp/fastagent',
       FASTAGENT_SANDBOX_MODE: 'remote',
@@ -175,7 +216,7 @@ describe('getSupervisorConfig', () => {
     });
     expect(config.srtPoolDefaults).toMatchObject({
       minReadyProcesses: 1,
-      poolSize: 3,
+      poolSize: 1,
     });
     expect(config).not.toHaveProperty('fastagentApiKey');
     expect(config).not.toHaveProperty('fastagentApiType');
@@ -196,6 +237,7 @@ describe('getSupervisorConfig', () => {
 
 async function loadConfigInIsolatedProcess(appDir: string, env: Record<string, string> = {}) {
   const moduleUrl = new URL('../config.ts', import.meta.url).href;
+  const tsxImportUrl = new URL('../../node_modules/tsx/dist/esm/index.mjs', import.meta.url).href;
   const script = [
     `import { getSupervisorConfig } from ${JSON.stringify(moduleUrl)};`,
     `const config = getSupervisorConfig(process.env, ${JSON.stringify(appDir)});`,
@@ -203,10 +245,16 @@ async function loadConfigInIsolatedProcess(appDir: string, env: Record<string, s
   ].join('\n');
   const { stdout } = await execFile(
     process.execPath,
-    ['--input-type=module', '--import', 'tsx', '--eval', script],
+    ['--input-type=module', '--import', tsxImportUrl, '--eval', script],
     {
       cwd: process.cwd(),
-      env,
+      env: {
+        PATH: process.env.PATH,
+        SystemRoot: process.env.SystemRoot,
+        TEMP: process.env.TEMP,
+        TMP: process.env.TMP,
+        ...env,
+      },
     },
   );
 

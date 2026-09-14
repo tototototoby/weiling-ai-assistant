@@ -1,32 +1,37 @@
 services:
   browserless:
+    profiles:
+      - browserless
     build: !reset null
-    image: ghcr.io/browserless/chromium:latest
-    pull_policy: always
+    image: ghcr.io/browserless/chromium:v2.56.7@sha256:b1ba7b054af2891a8199f884d4bd249cf8c3bd2fa8a97b339077e40f92803ba8
+    pull_policy: missing
 
   sandbox-runtime:
     build: !reset null
-    image: ghcr.io/yokingma/weclaws/sandbox-runtime:latest
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
     pull_policy: always
     volumes: !override
-      - ${WECLAWS_DATA_ROOT}/sandbox-user-workspaces:/app/apps/sandbox-runtime/user-workspaces
-      - ${WECLAWS_DATA_ROOT}/instances:/app/storage/instances
-      - ${WECLAWS_DATA_ROOT}/sandbox-runtime-private:/app/storage/sandbox-runtime-private
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-user-workspaces:/app/apps/sandbox-runtime/user-workspaces
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/instances:/app/storage/instances
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-runtime-private:/app/storage/sandbox-runtime-private
 
   supervisor:
     build: !reset null
-    image: ghcr.io/yokingma/weclaws/supervisor:latest
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
     pull_policy: always
     volumes: !override
-      - ${WECLAWS_DATA_ROOT}/sqlite:/app/storage/sqlite
-      - ${WECLAWS_DATA_ROOT}/instances:/app/storage/instances
-      - ${WECLAWS_DATA_ROOT}/sandbox-runtime-private:/app/storage/sandbox-runtime-private
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sqlite:/app/storage/sqlite
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/instances:/app/storage/instances
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/lark:/app/storage/lark
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-runtime-private:/app/storage/sandbox-runtime-private
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/secrets:/app/storage/secrets:ro
 
   web:
     build: !reset null
-    image: ghcr.io/yokingma/weclaws/web:latest
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
     pull_policy: always
     volumes: !override
-      - ${WECLAWS_DATA_ROOT}/sqlite:/app/storage/sqlite
-      - ${WECLAWS_DATA_ROOT}/instances:/app/storage/instances
-      - ${WECLAWS_DATA_ROOT}/sandbox-runtime-private:/app/storage/sandbox-runtime-private
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sqlite:/app/storage/sqlite
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/instances:/app/storage/instances
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-runtime-private:/app/storage/sandbox-runtime-private
+      - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/secrets:/app/storage/secrets

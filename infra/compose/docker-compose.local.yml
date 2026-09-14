@@ -1,0 +1,17 @@
+services:
+  browserless:
+    pull_policy: never
+
+  sandbox-runtime:
+    pull_policy: never
+    ports: !override
+      - "127.0.0.1:8788:8788"
+
+  supervisor:
+    pull_policy: never
+
+  web:
+    pull_policy: never
+    ports: !override
+      - "0.0.0.0:80:3000"
+      - "0.0.0.0:3000:3000"

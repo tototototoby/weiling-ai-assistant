@@ -1,5 +1,263 @@
 # CHANGELOG
 
+## Unreleased (Org Groups, Employee Broadcast, Reports, Delivery Health, Poster)
+
+### Added
+
+- The bundled presentation `ppt-skill` was removed from the managed distribution pending a separate license review; the application no longer assumes that Skill is present.
+- Employee groups and group leaders: admins create groups, assign leaders and members, and manage a group task loop (assign, track, submit, accept/revision) from `/admin/groups`; employees see their team and tasks on `/me/team` and `/me/tasks`.
+- Employee self-service broadcast: authorized employees (or group leaders for their own group) can send proactive notices to all, a group, or selected staff through the Bot; requests are authenticated against the supervisor internal bridge, rate-limited per sender, and written to the durable IM delivery queue with sender metadata.
+- Admin reports at `/admin/reports`: per-Bot inbound activity (7/30 days), delivery success/failure summaries, and email volume; driven by `bot_daily_activity`, `admin_message_deliveries`, and `email_deliveries`.
+- Delivery health monitoring: a configurable daily check (default 09:00, threshold 3 failures) flags failed, stuck, and runtime-error signals and sends an alert email to the configured ops mailbox; history is stored in `delivery_health_checks`.
+- Poster skill (`poster-design`) with brand templates and optional OpenAI-compatible image generation (`global_imagegen_configs` published per-Bot to `data/secrets/imagegen.json`).
+- Managed skills `broadcast-notice` and `group-task` expose the internal broadcast and task endpoints to Bot agents; manifest bumped to `2026-08-24-org-broadcast-tasks-poster-v49`.
+- Signed-in non-admin users now land on `/chat` for both home and login/register redirects.
+
+### Changed
+
+- Migration `0027_org_task_broadcast.sql` adds `employee_groups`, `group_tasks`, `global_broadcast_configs`, `global_delivery_health_configs`, `global_imagegen_configs`, `delivery_health_checks`, `bot_daily_activity`, plus `group_id` on employee directory entries and `metadata` on admin message deliveries.
+- FastAgent children receive `WECLAWS_BOT_INSTANCE_ID`, `WECLAWS_INTERNAL_URL`, and `WECLAWS_INTERNAL_API_TOKEN` so managed skills can call the supervisor internal bridge.
+- Employee broadcasts and group-task notifications are tagged `channel: im` and delivered through the IM-only path (Weixin first, then WeCom) without email fallback.
+
+### Fixed
+
+- The explicit `pnpm prepare:fastagent` path now writes a versioned patch marker and accepts an already fully patched V24-V26 dependency, making local preparation idempotent without weakening the normal fail-closed patch mode.
+- Supervisor process identity and singleton-lock checks now read process start time and command lines through PowerShell on Windows while retaining the existing `ps` path on POSIX hosts.
+- Windows test and development launches now pass absolute TSX imports as `file://` URLs and can execute explicit `.js`/`.mjs` FastAgent fixtures through the current Node runtime; POSIX executable checks remain unchanged.
+- `ProcessManager.dispose()` now waits briefly for force-killed child processes to release OS handles before returning, preventing workspace and SQLite cleanup races on Windows.
+- The root test entrypoint now runs workspaces sequentially so Supervisor process tests and the Web jsdom suite do not starve each other on low-core Windows or CI hosts.
+- Upgraded Nodemailer and the build/test dependency chain to versions without known npm audit findings; production dependency audit now reports zero vulnerabilities.
+- Feishu P2P turns now require the same workspace file marker for newly generated and previously existing files, and explicitly forbid claiming an image/file was sent when the final reply contains no valid delivery marker.
+- Long-running Feishu P2P turns now post idempotent, generic progress updates after 2, 5, and 10 minutes, then cancel remaining timers when the turn finishes or fails; a progress-send failure cannot fail the user's main task.
+- FastAgent V25 now serializes sandbox re-authentication after a per-Bot runtime or Socket.IO reconnect. Session/tool requests wait for the same authentication promise instead of observing `connected=true` with `authenticated=false` and failing as `Not authenticated`.
+- Feishu P2P explicit file markers now take precedence over inline-path fallback, and invalid or nonexistent implicit image references are ignored instead of producing a false attachment-failure notice after valid images were delivered.
+- Feishu P2P replies now recover generated images when the model names a workspace-relative image path in Markdown inline code but omits the `[飞书文件: ...]` marker; the fallback never scans the workspace, ignores URLs/absolute paths/non-images, deduplicates explicit markers, and still uses canonical path validation before sending.
+- Feishu P2P/group turns now wait up to 20 minutes, use channel-specific file markers, and remove Weixin send tools from each Feishu run through a fail-closed FastAgent V24 visible-tool filter while retaining the shared main session.
+- Feishu group attachment delivery now records dedupe and success logs only after the Lark send succeeds, scopes dedupe per chat, continues valid sibling files, and posts a count-only notice for failed or rejected markers.
+- Feishu group output no longer scans recent workspace images when no marker is present, and explicit group-file markers are constrained to the current Bot's canonical workspace with traversal, arbitrary absolute path and symlink rejection.
+- Feishu group mention routing now requires an exact rendered `@appName` boundary and fails closed when the app name cannot be resolved, preventing filenames or unrelated mentions from starting a group turn.
+- Repeated sandbox child failures are rate-limited by a 30-second per-Bot replacement cooldown while explicit configuration and restart intents remain immediate.
+- Feishu file and image events now stage safe workspace-relative attachments before the model turn, and per-chat event serialization preserves file-then-text order without auto-installing or executing received files.
+- Sandbox pool reconciliation now detects inner `stopped` / `error` workers and sustained capacity loss even when the per-Bot API still returns HTTP 200, replacing only the affected Bot child while preserving healthy sibling pools.
+- Missed scheduled-task recovery now sends the generated final text through the IM-only Weixin/WeCom sender with a stable semantic key, and records `delivered` only after that sender succeeds instead of treating model completion as proof of delivery.
+- Weixin text+media merge turns now emit `weclaws_user_active` after completion, so `bot_daily_activity` counters and deferred-message resumption work for the merge-window path (it previously returned early without the signal).
+- A reconciler writes per-Bot internal bridge credentials to `data/secrets/weclaws-bridge.json` (0600) so sandbox skill scripts reach `http://supervisor:8790` without relying on environment propagation.
+- Sanitized the production `.env` `WECLAWS_INTERNAL_API_TOKEN` line that had been polluted by a concatenated `WECLAWS_QWEN_API_KEY` assignment.
+
+## Unreleased (Weixin Text+Media Merge)
+
+### Fixed
+
+- Personal-Weixin "text plus image/file sent together" messages no longer lose the attachment: the pinned FastAgent CLI patch holds Weixin text-only messages in a short merge window (default 2000 ms, configurable via `WECLAWS_WECHAT_MERGE_WINDOW_MS`) and merges a following media item into the same turn, so the model receives the text and attachment together.
+- Media arriving after the merge window while a turn is already running is now persisted and steered back into the running session with an actionable file reference instead of being silently dropped.
+- Merged turns no longer crash the Bot process: the merge state initializes its text buffer, and the merge guard reads the actual channel id instead of the conversation key.
+- Image attachments now carry a saved file-path reference into the model prompt with a direct instruction to read images via the `qwen-vision` skill and documents via `office-files`, so non-multimodal models process media without searching the workspace.
+- Steer-path attachment persistence now uses the same message-id source as the normal queue path, fixing the `path`-argument failure that previously prevented media from being saved.
+
+### Changed
+
+- Attachment reference copy now names images as “图片” and tells the model to read media immediately instead of waiting for a later prompt.
+
+## Unreleased (QR Ten-Minute Stability)
+
+### Fixed
+
+- Supervisor now keeps the first QR emitted by the current FastAgent process until expiry or an explicit reissue request; repeated same-process `qr_code` events no longer refresh `qrCodeIssuedAt` every two minutes.
+- A new FastAgent process now clears the previous process's QR before recording its own code, so a runtime restart cannot leave stale QR state behind.
+
+## Unreleased (Global Email Notifications)
+
+### Added
+
+- Added a Supervisor-owned SMTP queue with retry, idempotent semantic keys, server-only password storage, and morning-briefing email fallback for unavailable Weixin/WeCom conversations.
+
+### Fixed
+
+- Shared the persistent SMTP secret directory between Compose Web and Supervisor with read-only Supervisor access, including the production bind-mount override.
+- Added failure/backoff and Compose secret-volume regression coverage.
+- Morning briefings now retry unresolved Chinese city names with an administrative suffix (for example, `厦门市`) before declaring weather unavailable.
+- Open-Meteo network errors, rate limits, and server errors now use three bounded attempts; rejected requests are evicted from the per-day cache so one transient failure cannot poison every later briefing for the same city.
+
+## Unreleased (Company-Person Dify Routing)
+
+### Changed
+
+- Company-person lookups for names, departments, titles, phone numbers, email addresses, office locations, and other contact details now explicitly route through the managed `dify_knowledge_query` tool.
+- The routing no longer depends on a complete local employee roster; Dify no-results are reported as no-result instead of being guessed or blocked by roster validation.
+- Bumped the managed Skill bundle version so the updated routing instructions are detected during the next local or deployed reconcile.
+
+## Unreleased (Transient Weixin Recovery)
+
+### Fixed
+
+- Repeated native network failures such as `fetch failed`, DNS errors, connection resets, and request timeouts now remain on a one-minute capped recovery loop instead of permanently moving every Bot to `failed` after four attempts.
+- Non-network runtime failures retain the existing bounded four-attempt safety threshold.
+- The production TCP DNS overlay now uses diversified public resolvers reachable from the deployment network and removes the LAN resolver that rejects TCP port 53.
+
+## Unreleased (Supervisor Reconcile Self-Healing)
+
+### Fixed
+
+- A periodic reconcile pass that does not settle within the configured watchdog window now terminates Supervisor so the container restart policy can restore Bot lifecycle management instead of leaving every Bot stopped indefinitely.
+- Supervisor singleton locking now distinguishes the current process from a stale lock left by a previous container process with the same PID, allowing ordinary Docker restarts to recover safely when PID 1 is reused.
+
+## Unreleased (Dynamic Welcome And File Attachments)
+
+### Changed
+
+- Supervisor now renders `processingAck` with the current global `assistantName` before sending both values to every running FastAgent child, so personal-Weixin acknowledgements refresh without a Bot restart.
+- The pinned FastAgent CLI patch now replaces the built-in long FastAgent introduction with a short dynamic welcome and routes saved file attachment references into the model turn for pure-file, file-plus-text, and file-plus-image messages.
+- The managed weather Skill now uses Open-Meteo first with a bounded `wttr.in` fallback, and the production sandbox runtime uses TCP DNS resolution for external weather hosts.
+
+## Unreleased (WeCom Employee Onboarding)
+
+### Changed
+
+- Added dynamic first-contact employee-name onboarding before any FastAgent model turn, including durable `msgid` replay, bounded invalid-name cooldown, and disabled-employee handling.
+- The successful name binding now renders its response before the repository call and commits the binding plus completed receipt atomically; Supervisor performs no post-binding receipt write.
+- FastAgent v20 message-copy patching now accepts an already-v19-patched CLI while still failing closed for partial or repeated v20 application.
+
+## Unreleased (Main-Agent Orchestration Rules)
+
+### Changed
+
+- Defined the current employee Bot as the user-facing main agent when runtime delegation tools are available: child agents receive minimum bounded context, cannot cross Bot data boundaries or perform external side effects, and their results must be verified and merged by the main agent.
+- Documented the single global WeCom entry, planned first-contact identity binding, and the separation between Agent behavior rules and future runtime-configurable user-facing copy.
+
+## Unreleased (High-tech Gaozhiling Message Identity)
+
+### Changed
+
+- Branded meal reminders, morning briefings, Weixin delayed acknowledgements, and all WeCom user-facing status replies with the former deployment-specific assistant identity.
+- Kept internal administrator waiting/status labels unchanged so operational states remain concise and scannable.
+
+## Unreleased (Durable Meal Reminder Delivery)
+
+### Changed
+
+- Routed daily meal reminders through the durable administrator-message queue with stable semantic keys, bounded retry/waiting recovery, and same-cycle dispatch; consent prompts retain their direct-delivery backoff.
+- Restored the meal consent, rainy-day, and standard reminder text as valid UTF-8 Chinese.
+
+## Unreleased (Bot-Centric WeCom Routing)
+
+### Changed
+
+- Switched inbound lookup, activity telemetry, message receipts, and proactive-delivery claims from employee identity to `botInstanceId`.
+- WeCom delivery now resolves the single preferred binding directly by Bot while retaining the existing Weixin fallback and shared FastAgent conversation path.
+
+## Unreleased (Meal Consent Delivery Backoff)
+
+### Fixed
+
+- Failed meal-reminder consent prompts now use bounded backoff instead of retrying every Supervisor minute, and a successful inbound turn retries the prompt immediately for that Bot only.
+
+## Unreleased (Activity-Woken Admin Delivery)
+
+### Changed
+
+- Exhausted administrator-message deliveries can now remain durably in `waiting_for_user` without blind periodic retries, then resume immediately after a successful Weixin or WeCom turn for the same Bot.
+
+### Fixed
+
+- Bot activity IPC is strictly identity-free and failure-isolated, so spoofed Bot IDs are ignored and a closed IPC channel or rejected wakeup callback cannot turn a successful inbound reply into a runtime failure.
+
+## Unreleased (WeCom Long Connection)
+
+### Added
+
+- Added an official `@wecom/aibot-node-sdk@1.0.7` WebSocket channel owned by Supervisor. It requires no public callback URL and maps each bound WeCom `userid` to the employee's existing Bot, session, memory, tools, workspace, and sandbox.
+- Added persistent inbound `msgid` deduplication, an immediate processing acknowledgement, background FastAgent turns over child IPC, bounded UTF-8 reply chunking, and observable connection and employee-delivery status.
+
+### Changed
+
+- Administrator messages, morning briefings, and meal reminders now prefer an enabled connected WeCom binding and fall back to the existing Weixin proactive path when WeCom is unavailable or delivery fails.
+
+### Fixed
+
+- The Supervisor production bundle now leaves the CommonJS WeCom SDK external so Node loads its built-in `crypto` dependency without the esbuild ESM dynamic-require failure.
+
+## Unreleased (Morning Briefing Delivery Backoff)
+
+### Fixed
+
+- Morning briefing failures now persist a future retry schedule instead of retrying on every Supervisor reconciliation pass.
+- Missing or expired Weixin conversation context waits until the next workday; Bot availability and transient failures use bounded minute-level delays.
+
+## Unreleased (Central Morning Briefing Delivery)
+
+### Added
+
+- Added Supervisor-owned workday scheduling and direct Weixin delivery for per-Bot morning briefings, including personal task summaries, location weather, bounded concurrency, idempotent semantic keys, and retryable failures.
+
+### Changed
+
+- Morning briefing workspace projection now publishes `deliveryMode=supervisor`; Agent cron setup is retired and one valid legacy task may finish migration day without duplicate central delivery.
+- Managed Skill bundle version advanced so running Bot workspaces receive the central-mode instructions.
+
+## Unreleased (Morning Briefing Runtime Observation)
+
+### Fixed
+
+- Supervisor now observes session-owned morning-briefing task IDs, next schedule times, and pending schedule/cleanup flags back into SQLite on every reconciliation pass.
+- A cron task registered after policy projection is detected without requiring another administrator policy revision.
+
+## Unreleased (Per-Bot Sandbox Isolation)
+
+### Changed
+
+- Remote sandbox credentials, ports, workspace maps, capacity, health, and restart ownership are now isolated per Bot while retaining one sandbox-runtime manager container.
+- The pool manager and private config/status documents now key children by `botInstanceId`; `ownerUserId` is display metadata only.
+- New Bot pools default to one ready worker and can be scaled independently from the administration console.
+
+## Unreleased (Runtime Self-Healing)
+
+### Fixed
+
+- Supervisor now terminates and evicts FastAgent children that emit a terminal `stopped` event without exiting, allowing restart backoff reconciliation to replace the stale process without a Supervisor restart.
+- Process cleanup now waits for child stdout to close and uses entry-identity checks so delayed cleanup cannot remove a replacement process.
+
+## Unreleased (RAGFlow Knowledge)
+
+### Added
+
+- Added global RAGFlow projection and per-Bot revision reconciliation. Enabled API credentials and dataset IDs are injected only into Bot child environments and never written to Bot settings.
+- Added the managed `ragflow_knowledge_query` MCP tool for bounded RAGFlow `/api/v1/retrieval` searches with sanitized document chunks.
+
+## Unreleased (Proactive Messages and Meal Reminders)
+
+### Fixed
+
+- Weixin QR reissue now clears FastAgent plugin state and secret stores in addition to the account roster, runtime, and bindings files, preventing invalid accounts from being restored after reissue.
+- The pinned FastAgent CLI patch now allows 15 seconds for the initial Weixin QR request instead of aborting after 5 seconds on transient DNS or upstream latency.
+- Initial Weixin QR acquisition retries up to three times, and the production Supervisor DNS resolver uses TCP mode to avoid intermittent UDP `ENOTFOUND` failures.
+
+### Added
+
+- Added a Supervisor-owned SQLite admin-message dispatcher with bounded retries and FastAgent IPC delivery. The CLI patch fails closed unless exactly one active binding exists and deduplicates already-recorded semantic deliveries.
+- Added code-driven meal reminders using the 2026 China statutory/adjusted workday calendar and Xiamen Open-Meteo rain detection: 10:30 on rainy workdays and 10:45 otherwise, with durable same-day suppression.
+- Added incremental `/proc` CPU sampling for the sandbox-runtime pool manager so its administration metric no longer remains permanently unavailable.
+- Relaxed the proactive-message account handoff to let FastAgent restore a persisted Weixin account when its in-memory account projection is briefly unavailable after a restart.
+
+## 2026-07-21
+
+### Added
+
+- Added supervisor-owned Dify MCP publication with atomic per-Bot `settings.json` merge, per-revision sync state, and durable restarts for active Bot processes.
+- Added startup-only injection of the centrally configured Dify API credentials and database URL into the managed MCP child process; secrets are never written to Bot settings or exposed to Web.
+- Added per-Bot Agent override reconciliation with independent revision tracking and filesystem drift repair.
+- Added a deduplicated visible acknowledgement after one second for slow Weixin turns while preserving the existing final-delivery path and retry policy.
+- Reduced safe Weixin progress pacing from 30 seconds to 12 seconds and enabled high-level MCP, web, skill, task, cron, and subtask progress while keeping raw command/tool output suppressed.
+- Added supervisor-owned global Agent publication for `AGENTS.md`, `SOUL.md`, filtered managed Skills, automatic new-Bot enrollment, per-Bot revision status, and filesystem drift repair.
+- Added supervisor-owned morning briefing policy projection from SQLite into each Bot's `.gaozhiling/morning-briefing.json` workspace state, with separate Skill (`policyVersion`) and administrator (`adminPolicyRevision`) version markers.
+- Added per-Bot failure isolation, employee opt-out observation, administrator force-enable behavior, atomic state writes, and regression tests for runtime-field preservation.
+
+### Changed
+
+- FastAgent startup-time managed-Skill sync now reuses the global enablement resolver so disabled Skills are not reinstalled while a Bot starts.
+- Supervisor startup and periodic reconciliation now apply morning briefing policy intent before normal Bot process reconciliation without allowing a policy sync failure to block Bot lifecycle management.
+- The supervisor image now applies fail-closed compatibility patches to `@fastagent/cli@0.8.4`: sandbox activity refreshes send an explicit empty JSON object, and transient native `fetch failed` errors during final Weixin delivery enter the existing retry path instead of dropping the reply immediately.
+- FastAgent gateway errors whose SDK message is `Request timed out.` are now classified as retryable timeouts, with short 2/3-second initial delays for timeout/network retries instead of the upstream 30-second delay.
+
 ## 2026-05-30
 
 ### Changed

@@ -107,8 +107,8 @@ describe('/api/bots/[id]/stream route', () => {
       heartbeatAt: '2026-03-30T10:18:19.068Z',
       restartRequestedAt: null,
       lastQrCodeId: null,
-      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3',
-      weixinAccountId: 'a8452ac9698f@im.bot',
+      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3',
+      weixinAccountId: '0123456789ab@im.bot',
       lastErrorCode: 'RUNTIME_ERROR',
       lastErrorMessage: 'Sandbox session crashed unexpectedly',
       createdAt: '2026-03-30T00:00:00.000Z',
@@ -129,8 +129,8 @@ describe('/api/bots/[id]/stream route', () => {
 
     expect(payload).toContain('event: bot.status.updated');
     expect(payload).toContain('"lastQrCodeId":null');
-    expect(payload).toContain('"lastQrCodeUrl":"https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3"');
-    expect(payload).toContain('"weixinAccountId":"a8452ac9698f@im.bot"');
+    expect(payload).toContain('"lastQrCodeUrl":"https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3"');
+    expect(payload).toContain('"weixinAccountId":"0123456789ab@im.bot"');
     expect(payload).toContain('"lastErrorMessage":"Sandbox session crashed unexpectedly"');
 
     await reader?.cancel();

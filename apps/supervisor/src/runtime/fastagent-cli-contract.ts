@@ -2,7 +2,7 @@ import { accessSync, constants as fsConstants, existsSync } from 'node:fs';
 import {
   FastAgentJsonlEventSchema,
   type FastAgentJsonlEvent,
-} from '@weclaws/shared';
+} from '@weiling-ai/shared';
 import {
   resolveFastAgentBinaryPath,
   type FastAgentBinaryResolutionOptions,

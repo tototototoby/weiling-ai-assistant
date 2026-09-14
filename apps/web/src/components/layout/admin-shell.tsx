@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, Menu, Server, Ticket } from 'lucide-react';
+import { BarChart3, Bot, BrainCircuit, Building2, CalendarClock, Database, LibraryBig, Menu, MessageSquareText, Plus, Send, Server, Settings2, Ticket, UsersRound } from 'lucide-react';
 import { AccountMenu } from '@/components/layout/account-menu';
 import { BrandLockup } from '@/components/layout/brand-lockup';
 import { LanguageSwitcher } from '@/components/layout/language-switcher';
@@ -19,31 +19,49 @@ import {
 import { cn } from '@/lib/utils';
 
 interface AdminShellProps {
+  avatarUrl?: string | null;
   children: ReactNode;
   email: string;
+  userName?: string | null;
 }
 
 interface AdminShellNavProps {
+  avatarUrl?: string | null;
   email: string;
   layout: 'rail' | 'sheet';
+  userName?: string | null;
 }
 
 const DESKTOP_SHELL_MAX_WIDTH = '1480px';
 const DESKTOP_SHELL_SIDE_PADDING = '1.5rem';
 const DESKTOP_RAIL_LEFT_OFFSET = `max(${DESKTOP_SHELL_SIDE_PADDING}, calc((100vw - ${DESKTOP_SHELL_MAX_WIDTH}) / 2 + ${DESKTOP_SHELL_SIDE_PADDING}))`;
 
-function AdminShellNav({ email, layout }: AdminShellNavProps) {
+function AdminShellNav({ avatarUrl, email, layout, userName }: AdminShellNavProps) {
   const { t } = useLocale();
   const pathname = usePathname();
   const isSandboxRuntimeRoute = pathname === '/admin/sandbox-runtime';
+  const isBotsRoute = pathname.startsWith('/admin/bots');
+  const isGlobalAgentRoute = pathname.startsWith('/admin/global-agent');
+  const isDifyRoute = pathname.startsWith('/admin/dify');
+  const isRagflowRoute = pathname.startsWith('/admin/ragflow');
+  const isWecomRoute = pathname.startsWith('/admin/wecom');
+  const isFeishuRoute = pathname.startsWith('/admin/feishu');
+  const isMorningBriefingsRoute = pathname.startsWith('/admin/morning-briefings');
   const isInvitesRoute = pathname.startsWith('/admin/invites');
+  const isMessagesRoute = pathname.startsWith('/admin/messages');
+  const isLlmProfilesRoute = pathname.startsWith('/admin/llm-profiles');
+  const isGroupsRoute = pathname.startsWith('/admin/groups');
+  const isReportsRoute = pathname.startsWith('/admin/reports');
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-6" data-admin-shell-nav={layout}>
       <div className="grid gap-6">
         <div className="grid gap-3">
           <BrandLockup
+            avatarFallback={(userName || email).slice(0, 1)}
             className="items-center gap-4"
+            imageUrl={avatarUrl}
+            label="微Link · 微灵 AI 助手"
             labelClassName="leading-none"
             variant="rail"
           />
@@ -57,6 +75,13 @@ function AdminShellNav({ email, layout }: AdminShellNavProps) {
           </div>
         </div>
 
+        <Button asChild className="justify-start" type="button">
+          <Link href="/admin/bots/new">
+            <Plus className="h-4 w-4" />
+            {t((messages) => messages.shell.createBot)}
+          </Link>
+        </Button>
+
         <nav aria-label={t((messages) => messages.shell.adminWorkspaceTitle)} className="grid gap-3">
           <AdminNavLink
             href="/admin/sandbox-runtime"
@@ -65,16 +90,76 @@ function AdminShellNav({ email, layout }: AdminShellNavProps) {
             label={t((messages) => messages.shell.adminSandboxRuntime)}
           />
           <AdminNavLink
+            href="/admin/bots"
+            icon={<Bot className="h-4 w-4" />}
+            isActive={isBotsRoute}
+            label={t((messages) => messages.shell.bots)}
+          />
+          <AdminNavLink
+            href="/admin/groups"
+            icon={<UsersRound className="h-4 w-4" />}
+            isActive={isGroupsRoute}
+            label={t((messages) => messages.shell.groups)}
+          />
+          <AdminNavLink
+            href="/admin/reports"
+            icon={<BarChart3 className="h-4 w-4" />}
+            isActive={isReportsRoute}
+            label={t((messages) => messages.shell.reports)}
+          />
+          <AdminNavLink
+            href="/admin/global-agent"
+            icon={<BrainCircuit className="h-4 w-4" />}
+            isActive={isGlobalAgentRoute}
+            label={t((messages) => messages.shell.globalAgent)}
+          />
+          <AdminNavLink
+            href="/admin/llm-profiles"
+            icon={<Settings2 className="h-4 w-4" />}
+            isActive={isLlmProfilesRoute}
+            label={t((messages) => messages.shell.llmProfiles)}
+          />
+          <AdminNavLink
+            href="/admin/dify"
+            icon={<Database className="h-4 w-4" />}
+            isActive={isDifyRoute}
+            label={t((messages) => messages.shell.dify)}
+          />
+          <AdminNavLink
+            href="/admin/ragflow"
+            icon={<LibraryBig className="h-4 w-4" />}
+            isActive={isRagflowRoute}
+            label={t((messages) => messages.shell.ragflow)}
+          />
+          <AdminNavLink
+            href="/admin/wecom"
+            icon={<Building2 className="h-4 w-4" />}
+            isActive={isWecomRoute}
+            label={t((messages) => messages.shell.wecom)}
+          />
+          <AdminNavLink
+            href="/admin/feishu"
+            icon={<Send className="h-4 w-4" />}
+            isActive={isFeishuRoute}
+            label={t((messages) => messages.shell.feishu)}
+          />
+          <AdminNavLink
+            href="/admin/morning-briefings"
+            icon={<CalendarClock className="h-4 w-4" />}
+            isActive={isMorningBriefingsRoute}
+            label={t((messages) => messages.shell.morningBriefings)}
+          />
+          <AdminNavLink
             href="/admin/invites"
             icon={<Ticket className="h-4 w-4" />}
             isActive={isInvitesRoute}
             label={t((messages) => messages.shell.invites)}
           />
           <AdminNavLink
-            href="/bots"
-            icon={<Bot className="h-4 w-4" />}
-            isActive={false}
-            label={t((messages) => messages.shell.bots)}
+            href="/admin/messages"
+            icon={<MessageSquareText className="h-4 w-4" />}
+            isActive={isMessagesRoute}
+            label={t((messages) => messages.shell.adminMessages)}
           />
         </nav>
       </div>
@@ -111,7 +196,7 @@ function AdminNavLink({ href, icon, isActive, label }: AdminNavLinkProps) {
   );
 }
 
-export function AdminShell({ children, email }: AdminShellProps) {
+export function AdminShell({ avatarUrl, children, email, userName }: AdminShellProps) {
   const { t } = useLocale();
   const shellFrameStyle: CSSProperties & Record<'--shell-rail-left', string> = {
     '--shell-rail-left': DESKTOP_RAIL_LEFT_OFFSET,
@@ -134,7 +219,7 @@ export function AdminShell({ children, email }: AdminShellProps) {
         className="flex h-full w-[min(88vw,20rem)] flex-col border-r-[color:var(--border-soft)]/50 bg-[color:var(--app-panel)]/92"
       >
         <SheetTitle className="sr-only">{t((messages) => messages.shell.adminWorkspaceTitle)}</SheetTitle>
-        <AdminShellNav email={email} layout="sheet" />
+        <AdminShellNav avatarUrl={avatarUrl} email={email} layout="sheet" userName={userName} />
       </SheetContent>
     </Sheet>
   );
@@ -157,7 +242,7 @@ export function AdminShell({ children, email }: AdminShellProps) {
             className="flex flex-col rounded-[var(--radius-shell)] border border-[color:var(--border-soft)] bg-[color:var(--app-panel)] p-4 lg:fixed lg:left-[var(--shell-rail-left)] lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-[248px]"
             data-admin-shell-rail=""
           >
-            <AdminShellNav email={email} layout="rail" />
+            <AdminShellNav avatarUrl={avatarUrl} email={email} layout="rail" userName={userName} />
           </div>
         </aside>
 

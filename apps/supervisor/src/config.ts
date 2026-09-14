@@ -5,10 +5,12 @@ import {
   parseSandboxRuntimePoolDefaults,
   resolveInstancesRootPath,
   type SandboxRuntimePoolDefaults,
-} from '@weclaws/shared';
+} from '@weiling-ai/shared';
 import { getFastAgentBinaryPathOrThrow } from './runtime/resolve-fastagent-binary-path';
 
 const DEFAULT_DATABASE_URL = 'file:./storage/sqlite/db.sqlite';
+const DEFAULT_INTERNAL_PORT = 8790;
+const DEFAULT_RECONCILE_STALL_TIMEOUT_MS = 120_000;
 const DEFAULT_SRT_SERVICE_HOST = 'sandbox-runtime';
 
 export type SupervisorSandboxMode = 'disabled' | 'remote';
@@ -16,9 +18,14 @@ export type SupervisorSandboxMode = 'disabled' | 'remote';
 export interface SupervisorConfig {
   databaseUrl: string;
   fastagentBinaryPath: string;
+  internalApiToken: string;
+  internalPort: number;
   instancesRoot: string;
+  larkConfigRoot: string;
+  larkCliPath: string;
   mockFastAgentFixturePath: string;
   reconcileIntervalMs: number;
+  reconcileStallTimeoutMs: number;
   sandboxApiKey: string | null;
   sandboxMode: SupervisorSandboxMode;
   sandboxUrl: string | null;
@@ -42,16 +49,33 @@ export function getSupervisorConfig(
     DEFAULT_RECONCILE_INTERVAL_MS,
     'RECONCILE_INTERVAL_MS',
   );
+  const reconcileStallTimeoutMs = parsePositiveInteger(
+    env.RECONCILE_STALL_TIMEOUT_MS,
+    DEFAULT_RECONCILE_STALL_TIMEOUT_MS,
+    'RECONCILE_STALL_TIMEOUT_MS',
+  );
+  const internalPort = parsePositiveInteger(
+    readPreferredEnv(env, 'WEILING_INTERNAL_PORT', 'WECLAWS_INTERNAL_PORT'),
+    DEFAULT_INTERNAL_PORT,
+    'WEILING_INTERNAL_PORT',
+  );
   const instancesRoot = resolveInstancesRootPath(workspaceRoot, env.INSTANCES_ROOT);
+  const larkConfigRoot = readPreferredEnv(env, 'WEILING_LARK_CONFIG_ROOT', 'WECLAWS_LARK_CONFIG_ROOT')
+    || path.join(workspaceRoot, 'storage', 'lark');
 
   return {
     databaseUrl: env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
     fastagentBinaryPath: getFastAgentBinaryPathOrThrow(env, {
       packageRoot: path.join(workspaceRoot, 'apps', 'supervisor'),
     }),
+    internalApiToken: readPreferredEnv(env, 'WEILING_INTERNAL_API_TOKEN', 'WECLAWS_INTERNAL_API_TOKEN') ?? '',
+    internalPort,
     instancesRoot,
+    larkConfigRoot,
+    larkCliPath: readPreferredEnv(env, 'WEILING_LARK_CLI_PATH', 'WECLAWS_LARK_CLI_PATH') || 'lark-cli',
     mockFastAgentFixturePath: path.join(workspaceRoot, 'tests', 'fixtures', 'mock-fastagent.ts'),
     reconcileIntervalMs,
+    reconcileStallTimeoutMs,
     sandboxApiKey: null,
     sandboxMode,
     sandboxUrl: null,
@@ -80,6 +104,23 @@ export function getSupervisorConfig(
       : null,
     workspaceRoot,
   };
+}
+
+function readPreferredEnv(
+  env: NodeJS.ProcessEnv,
+  preferredKey: string,
+  legacyKey: string,
+): string | undefined {
+  const preferred = env[preferredKey]?.trim();
+  if (preferred) {
+    return preferred;
+  }
+
+  const legacy = env[legacyKey]?.trim();
+  if (legacy && env === process.env) {
+    console.warn(`${legacyKey} is deprecated; use ${preferredKey} instead.`);
+  }
+  return legacy;
 }
 
 function loadWorkspaceEnvFileIfNeeded(env: NodeJS.ProcessEnv, workspaceRoot: string) {

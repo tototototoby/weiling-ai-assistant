@@ -2,12 +2,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { createDatabaseClient, migrateDatabase } from '../../client';
+import { migrateDatabase } from '../../client.js';
+import {
+  closeTrackedDatabaseClients,
+  createTrackedDatabaseClient as createDatabaseClient,
+} from './test-database-client.js';
 import { UserRepository } from '../user-repository';
 
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  closeTrackedDatabaseClients();
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { force: true, recursive: true })));
 });
 

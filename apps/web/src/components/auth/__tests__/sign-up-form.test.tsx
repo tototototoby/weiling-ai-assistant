@@ -71,7 +71,7 @@ it('submits an invite code through the custom invite signup API when provided', 
     },
     method: 'POST',
   }));
-  expect(pushMock).toHaveBeenCalledWith('/bots');
+  expect(pushMock).toHaveBeenCalledWith('/');
   expect(refreshMock).toHaveBeenCalled();
 });
 

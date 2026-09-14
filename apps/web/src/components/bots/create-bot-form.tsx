@@ -33,6 +33,8 @@ interface CreateBotResponse {
 interface CreateBotFormProps {
   profiles: LlmProfileItem[];
   quota: BotCreationQuota;
+  profileManagementPath?: string;
+  successPathPrefix?: string;
 }
 
 function RequiredIndicator() {
@@ -43,7 +45,12 @@ function RequiredIndicator() {
   );
 }
 
-export function CreateBotForm({ profiles, quota }: CreateBotFormProps) {
+export function CreateBotForm({
+  profiles,
+  profileManagementPath = '/settings',
+  quota,
+  successPathPrefix = '/bots',
+}: CreateBotFormProps) {
   const router = useRouter();
   const { t } = useLocale();
   const nameLabel = t((messages) => messages.createBot.name);
@@ -88,7 +95,7 @@ export function CreateBotForm({ profiles, quota }: CreateBotFormProps) {
           return;
         }
 
-        router.push(`/bots/${payload.data.id}`);
+        router.push(`${successPathPrefix}/${payload.data.id}`);
         router.refresh();
       } catch {
         setErrorMessage(t((messages) => messages.createBot.failed));
@@ -217,7 +224,7 @@ export function CreateBotForm({ profiles, quota }: CreateBotFormProps) {
           {!selectedProfile ? (
             <ErrorNotice>
               {t((messages) => messages.createBot.noProfiles)}{' '}
-              <Link className="font-medium underline underline-offset-4" href="/settings">
+              <Link className="font-medium underline underline-offset-4" href={profileManagementPath}>
                 {t((messages) => messages.createBot.openSettings)}
               </Link>
             </ErrorNotice>
@@ -226,7 +233,7 @@ export function CreateBotForm({ profiles, quota }: CreateBotFormProps) {
           {selectedProfile && !isRuntimeConfigComplete ? (
             <ErrorNotice>
               {t((messages) => messages.createBot.runtimeIncomplete)}{' '}
-              <Link className="font-medium underline underline-offset-4" href="/settings">
+              <Link className="font-medium underline underline-offset-4" href={profileManagementPath}>
                 {t((messages) => messages.createBot.openSettings)}
               </Link>
             </ErrorNotice>

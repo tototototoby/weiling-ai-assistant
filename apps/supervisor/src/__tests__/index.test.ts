@@ -3,8 +3,15 @@ import { promisify } from 'node:util';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { runSupervisorProcess, scheduleReconcilePass } from '../index';
+import {
+  runGlobalAgentConfigPass,
+  runMorningBriefingPass,
+  runMorningBriefingPolicyPass,
+  runSupervisorProcess,
+  scheduleReconcilePass,
+} from '../index';
 
 const tempDirs: string[] = [];
 const execFile = promisify(execFileCallback);
@@ -29,6 +36,8 @@ describe('startSupervisor', () => {
     }, null, 2));
 
     const moduleUrl = new URL('../index.ts', import.meta.url).href;
+    const tsxImportUrl = new URL('../../node_modules/tsx/dist/esm/index.mjs', import.meta.url).href;
+    const tsxTsconfigPath = fileURLToPath(new URL('../../tsconfig.json', import.meta.url));
     const script = [
       `import { startSupervisor } from ${JSON.stringify(moduleUrl)};`,
       `process.chdir(${JSON.stringify(appDir)});`,
@@ -47,10 +56,15 @@ describe('startSupervisor', () => {
 
     const { stdout } = await execFile(
       process.execPath,
-      ['--input-type=module', '--import', 'tsx', '--eval', script],
+      ['--input-type=module', '--import', tsxImportUrl, '--eval', script],
       {
         cwd: process.cwd(),
         env: {
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot,
+          TEMP: process.env.TEMP,
+          TMP: process.env.TMP,
+          TSX_TSCONFIG_PATH: tsxTsconfigPath,
           DATABASE_URL: 'file:./storage/sqlite/test.sqlite',
           FASTAGENT_BINARY_PATH: '/tmp/fastagent',
           FASTAGENT_SANDBOX_MODE: 'disabled',
@@ -61,7 +75,7 @@ describe('startSupervisor', () => {
     const result = JSON.parse(stdout) as { secondError: string | null };
 
     expect(result.secondError).toContain('Supervisor singleton lock is already held by pid');
-  });
+  }, 15_000);
 });
 
 describe('runSupervisorProcess', () => {
@@ -109,6 +123,45 @@ describe('scheduleReconcilePass', () => {
     }, onError);
 
     await flushMicrotasks();
+
+    expect(onError).toHaveBeenCalledWith(failure);
+  });
+});
+
+describe('runMorningBriefingPolicyPass', () => {
+  it('reports a policy-list failure without rejecting the supervisor reconcile cycle', async () => {
+    const onError = vi.fn<(error: unknown) => void>();
+    const failure = new Error('policy query failed');
+
+    await expect(runMorningBriefingPolicyPass({
+      runOnce: vi.fn().mockRejectedValue(failure),
+    }, onError)).resolves.toBeUndefined();
+
+    expect(onError).toHaveBeenCalledWith(failure);
+  });
+});
+
+describe('runMorningBriefingPass', () => {
+  it('reports a scheduler failure without rejecting the supervisor reconcile cycle', async () => {
+    const onError = vi.fn<(error: unknown) => void>();
+    const failure = new Error('central delivery query failed');
+
+    await expect(runMorningBriefingPass({
+      runOnce: vi.fn().mockRejectedValue(failure),
+    }, onError)).resolves.toBeUndefined();
+
+    expect(onError).toHaveBeenCalledWith(failure);
+  });
+});
+
+describe('runGlobalAgentConfigPass', () => {
+  it('reports a global publication failure without rejecting the supervisor reconcile cycle', async () => {
+    const onError = vi.fn<(error: unknown) => void>();
+    const failure = new Error('global config query failed');
+
+    await expect(runGlobalAgentConfigPass({
+      runOnce: vi.fn().mockRejectedValue(failure),
+    }, onError)).resolves.toBeUndefined();
 
     expect(onError).toHaveBeenCalledWith(failure);
   });

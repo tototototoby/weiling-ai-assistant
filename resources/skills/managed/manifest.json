@@ -1,13 +1,9 @@
 {
-  "version": "2026-05-18-curated-v11",
+  "version": "0.1.0-beta.1",
   "skills": [
     {
       "name": "agent-browser",
       "path": "agent-browser"
-    },
-    {
-      "name": "ppt-skill",
-      "path": "ppt-skill"
     },
     {
       "name": "editorial-card-screenshot",
@@ -32,6 +28,50 @@
     {
       "name": "personal-planner",
       "path": "personal-planner"
+    },
+    {
+      "name": "weiling-assistant",
+      "path": "weiling-assistant"
+    },
+    {
+      "name": "enterprise-mail",
+      "path": "enterprise-mail"
+    },
+    {
+      "name": "html-report",
+      "path": "html-report"
+    },
+    {
+      "name": "morning-briefing",
+      "path": "morning-briefing"
+    },
+    {
+      "name": "qwen-vision",
+      "path": "qwen-vision"
+    },
+    {
+      "name": "office-files",
+      "path": "office-files"
+    },
+    {
+      "name": "knowledge-query",
+      "path": "knowledge-query"
+    },
+    {
+      "name": "broadcast-notice",
+      "path": "broadcast-notice"
+    },
+    {
+      "name": "group-task",
+      "path": "group-task"
+    },
+    {
+      "name": "poster-design",
+      "path": "poster-design"
+    },
+    {
+      "name": "feishu-setup",
+      "path": "feishu-setup"
     },
     {
       "name": "lark-shared",

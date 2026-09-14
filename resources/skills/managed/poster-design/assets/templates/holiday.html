@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>节日问候海报</title>
+  <style>
+    :root {
+      --poster-bg: __POSTER_BACKGROUND_URL__;
+      --blue: #77c9ec; --blue-deep: #19323c; --red: #fcaba7; --ink: #19323c; --paper: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+      font-family: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+    .canvas {
+      position: fixed; top: 0; left: 0; width: 900px; height: 1600px; overflow: hidden;
+      color: var(--ink); background: var(--paper);
+    }
+    .background-layer {
+      position: absolute; inset: 0; z-index: 0;
+      background-image: var(--poster-bg); background-size: cover; background-position: center;
+      opacity: 1;
+    }
+    .blue-band {
+      position: absolute; left: 0; right: 0; top: 0; height: 420px; z-index: 1;
+      background: linear-gradient(160deg, var(--blue-deep) 0%, var(--blue) 55%, #fcaba7 130%);
+      clip-path: polygon(0 0, 100% 0, 100% 86%, 0 100%);
+    }
+    .content {
+      position: absolute; inset: 0; z-index: 3; padding: 120px 76px 72px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .eyebrow {
+      display: inline-flex; align-self: center; align-items: center; gap: 14px;
+      padding: 12px 26px; border: 1px solid rgba(255,255,255,0.72); border-radius: 999px;
+      color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: 6px;
+      background: rgba(255,255,255,0.12);
+    }
+    .eyebrow-dot { width: 14px; height: 14px; border-radius: 50%; background: #fcaba7; }
+    .greeting {
+      margin: 90px 0 0; text-align: center; color: #ffffff; font-size: 120px; line-height: 1.15;
+      font-weight: 900; letter-spacing: 4px;
+    }
+    .wish {
+      margin: 36px 0 0; text-align: center; color: #eaf8fc; font-size: 40px; line-height: 1.6;
+      font-weight: 500;
+    }
+    .body {
+      margin-top: 48px; padding: 44px 52px; background: #ffffff; border-left: 10px solid var(--red);
+      font-size: 34px; line-height: 1.9; font-weight: 500; text-align: center;
+    }
+    .footer {
+      margin-top: 40px; display: flex; align-items: center; justify-content: space-between;
+      padding-top: 28px; border-top: 3px solid var(--blue);
+      font-size: 28px; font-weight: 700; color: var(--blue-deep);
+    }
+    .brand { display: inline-flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px;
+      border-radius: 8px; background: var(--red); color: #ffffff; font-size: 24px; font-weight: 900;
+    }
+    .assistant-name { color: var(--red); }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <div class="background-layer"></div>
+    <div class="blue-band"></div>
+    <section class="content">
+      <div class="eyebrow"><span class="eyebrow-dot"></span><span>节日问候</span></div>
+      <div>
+        <h1 class="greeting">节日快乐</h1>
+        <div class="wish">愿您工作顺利、生活美满</div>
+      </div>
+      <div class="body">问候正文或祝福语（可选补充）。</div>
+      <footer class="footer">
+        <span class="brand"><span class="brand-mark">灵</span><span>微Link · 微灵 AI 助手</span></span>
+        <span class="assistant-name">微Link</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>

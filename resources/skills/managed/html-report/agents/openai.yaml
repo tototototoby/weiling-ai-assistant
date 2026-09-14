@@ -1,0 +1,7 @@
+interface:
+  display_name: "HTML 报告"
+  short_description: "制作专业、可打印、可离线打开的公司 HTML 数据与业务报告"
+  default_prompt: "使用 $html-report 将这些资料整理成一份专业、可离线查看和打印的 HTML 报告。"
+
+policy:
+  allow_implicit_invocation: true

@@ -49,3 +49,4 @@ export {
   type SandboxRuntimePoolDefaults,
   type SandboxRuntimePoolState,
 } from './sandbox-runtime-pools';
+export { normalizeEmployeeLookupName } from './employee-lookup-name';

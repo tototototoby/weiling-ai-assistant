@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const deleteWorkspaceByIdMock = vi.fn();
@@ -152,6 +153,7 @@ describe('bot-service DTO mapping', () => {
       processPid: 123,
       processStartedAt: '2026-03-30T00:00:01.000Z',
       provider: 'anthropic',
+      qrCodeIssuedAt: null,
       qrReissueRequestedAt: null,
       restartRequestedAt: '2026-03-30T00:00:06.000Z',
       status: 'running',
@@ -171,7 +173,7 @@ describe('bot-service DTO mapping', () => {
       lastErrorCode: 'RUNTIME_ERROR',
       lastErrorMessage: 'Sandbox session crashed unexpectedly',
       lastQrCodeId: null,
-      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3',
+      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3',
       model: 'gpt-5.4',
       name: 'Bot One',
       processPid: 84721,
@@ -181,7 +183,7 @@ describe('bot-service DTO mapping', () => {
       restartRequestedAt: null,
       status: 'running',
       updatedAt: new Date('2026-03-30T10:18:19.068Z'),
-      weixinAccountId: 'a8452ac9698f@im.bot',
+      weixinAccountId: '0123456789ab@im.bot',
       workspaceId: 'ws_1',
     });
 
@@ -198,17 +200,18 @@ describe('bot-service DTO mapping', () => {
       lastErrorCode: 'RUNTIME_ERROR',
       lastErrorMessage: 'Sandbox session crashed unexpectedly',
       lastQrCodeId: null,
-      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3',
+      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3',
       model: 'gpt-5.4',
       name: 'Bot One',
       processPid: 84721,
       processStartedAt: '2026-03-30T10:18:18.753Z',
       provider: 'openai',
+      qrCodeIssuedAt: null,
       qrReissueRequestedAt: null,
       restartRequestedAt: null,
       status: 'running',
       updatedAt: '2026-03-30T10:18:19.068Z',
-      weixinAccountId: 'a8452ac9698f@im.bot',
+      weixinAccountId: '0123456789ab@im.bot',
       workspaceId: 'ws_1',
     });
   });
@@ -523,7 +526,7 @@ describe('bot-service DTO mapping', () => {
     const result = await deleteBot('bot_1');
 
     expect(deleteWorkspaceByIdMock).toHaveBeenCalledWith('ws_1');
-    expect(rmMock).toHaveBeenCalledWith('/tmp/instances/bot_1', {
+    expect(rmMock).toHaveBeenCalledWith(join('/tmp/instances', 'bot_1'), {
       force: true,
       recursive: true,
     });

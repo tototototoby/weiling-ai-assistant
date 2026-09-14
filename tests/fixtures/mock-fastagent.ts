@@ -2,7 +2,7 @@ type MockFastAgentScenario = 'crash_after_running' | 'happy';
 
 const DEFAULT_STEP_DELAY_MS = 50;
 const EXIT_DELAY_MS = 5;
-const TRUSTED_QR_CODE_URL = 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3';
+const TRUSTED_QR_CODE_URL = 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3';
 
 const agentId = process.env.IM_GATEWAY_AGENT_ID ?? 'bot_unknown';
 const scenario = getScenario(process.env.MOCK_FASTAGENT_SCENARIO);

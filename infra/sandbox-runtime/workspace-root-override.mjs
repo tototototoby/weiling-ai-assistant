@@ -1,20 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from 'node:path';
 
 export const WORKSPACE_MAP_VERSION = 1;
 export const VIRTUAL_WORKSPACE_ROOT = '/workspace';
 export const VIRTUAL_STATE_ROOT = '/state';
 
-const PATCH_MARKER = Symbol.for('weclaws.sandbox-runtime.workspace-root-override');
+const PATCH_MARKER = Symbol.for('weiling.sandbox-runtime.workspace-root-override');
 const SESSION_SECURITY_PATCH_MARKER = Symbol.for(
-  'weclaws.sandbox-runtime.workspace-root-override.session-security',
+  'weiling.sandbox-runtime.workspace-root-override.session-security',
 );
 const REAL_STATE_PATH_MARKER = Symbol.for(
-  'weclaws.sandbox-runtime.workspace-root-override.real-state-path',
+  'weiling.sandbox-runtime.workspace-root-override.real-state-path',
 );
 const REAL_WORKSPACE_PATH_MARKER = Symbol.for(
-  'weclaws.sandbox-runtime.workspace-root-override.real-workspace-path',
+  'weiling.sandbox-runtime.workspace-root-override.real-workspace-path',
 );
 const BROWSERLESS_COMMAND_ENV_KEYS = [
   'BROWSERLESS_API_KEY',
@@ -66,7 +66,7 @@ export function resolveWorkspacePathOverrideSync({ workspaceId, workspaceMapFile
     return null;
   }
 
-  return resolve(entry.workspacePath);
+  return resolveRuntimePath(entry.workspacePath);
 }
 
 export function installWorkspacePathOverride({ WorkspaceManager, workspaceMapFile }) {
@@ -522,7 +522,7 @@ function parseWorkspaceMapDocument(rawDocument) {
       .map(([workspaceId, entry]) => [
         workspaceId,
         {
-          workspacePath: resolve(entry.workspacePath),
+          workspacePath: resolveRuntimePath(entry.workspacePath),
           updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : fallbackDocument.updatedAt,
         },
       ]),
@@ -547,4 +547,10 @@ function createEmptyWorkspaceMapDocument() {
 
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function resolveRuntimePath(value) {
+  return typeof value === 'string' && value.startsWith('/')
+    ? posix.resolve(value)
+    : resolve(value);
 }

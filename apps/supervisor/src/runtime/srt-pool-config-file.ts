@@ -1,13 +1,14 @@
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { UserSandboxRuntimePoolRecord } from '@weclaws/db';
+import type { BotSandboxRuntimePoolRecord } from '@weiling-ai/db';
 import {
   normalizeSandboxRuntimeDenyReadPaths,
   SRT_POOL_CONFIG_FILE_VERSION,
-} from '@weclaws/shared';
+} from '@weiling-ai/shared';
 
 export interface SandboxRuntimePoolConfigEntry {
   apiKey: string;
+  botInstanceId: string;
   defaultAllowRead: string[];
   defaultAllowWrite: string[];
   defaultDeniedDomains: string[];
@@ -17,7 +18,6 @@ export interface SandboxRuntimePoolConfigEntry {
   healthCheckIntervalMs: number;
   maxConcurrentInit: number;
   minReadyProcesses: number;
-  ownerUserId: string;
   poolSize: number;
   port: number;
   portRangeEnd: number;
@@ -38,7 +38,7 @@ export interface SandboxRuntimePoolConfigDocument {
 
 export interface CreateSandboxRuntimePoolConfigDocumentInput {
   now?: Date;
-  pools: UserSandboxRuntimePoolRecord[];
+  pools: BotSandboxRuntimePoolRecord[];
   serviceHost: string;
   workspaceMapDir: string;
 }
@@ -52,9 +52,10 @@ export function createSandboxRuntimePoolConfigDocument(
 ): SandboxRuntimePoolConfigDocument {
   return {
     pools: [...input.pools]
-      .sort((first, second) => first.ownerUserId.localeCompare(second.ownerUserId))
+      .sort((first, second) => first.botInstanceId.localeCompare(second.botInstanceId))
       .map((pool) => ({
         apiKey: pool.apiKey,
+        botInstanceId: pool.botInstanceId,
         defaultAllowRead: pool.defaultAllowRead,
         defaultAllowWrite: pool.defaultAllowWrite,
         defaultDeniedDomains: pool.defaultDeniedDomains,
@@ -64,7 +65,6 @@ export function createSandboxRuntimePoolConfigDocument(
         healthCheckIntervalMs: pool.healthCheckIntervalMs,
         maxConcurrentInit: pool.maxConcurrentInit,
         minReadyProcesses: pool.minReadyProcesses,
-        ownerUserId: pool.ownerUserId,
         poolSize: pool.poolSize,
         port: pool.port,
         portRangeEnd: pool.portRangeEnd,
@@ -74,7 +74,7 @@ export function createSandboxRuntimePoolConfigDocument(
         updatedAt: pool.updatedAt.toISOString(),
         url: `http://${input.serviceHost}:${pool.port}`,
         workspaceBasePath: pool.workspaceBasePath,
-        workspaceMapFile: join(input.workspaceMapDir, `${pool.ownerUserId}.json`),
+        workspaceMapFile: join(input.workspaceMapDir, `${pool.botInstanceId}.json`),
       })),
     updatedAt: (input.now ?? new Date()).toISOString(),
     version: SRT_POOL_CONFIG_FILE_VERSION,

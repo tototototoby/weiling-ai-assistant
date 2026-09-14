@@ -1,0 +1,17 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated build and dependency directories are not release source"
+paths = [
+  '''(^|[\\/])node_modules([\\/]|$)''',
+  '''(^|[\\/])\.next([\\/]|$)''',
+  '''(^|[\\/])dist([\\/]|$)''',
+  '''(^|[\\/])coverage([\\/]|$)''',
+]
+
+[[allowlists]]
+description = "Redacted Lark documentation page-token example"
+paths = ['''resources[\\/]skills[\\/]managed[\\/]lark-im[\\/]references[\\/]lark-im-reactions\.md''']
+regexTarget = "match"
+regexes = ['''YhljsPiGfUgnVAg9urvRFd-BvSqRLxxxx''']

@@ -4,8 +4,8 @@ import {
   botInstances as botInstancesTable,
   workspaces,
   type BotEventCursor as BotEventCursorRecord,
-} from '@weclaws/db';
-import { resolveBotInstancePaths, type BotDesiredState, type BotStatus } from '@weclaws/shared';
+} from '@weiling-ai/db';
+import { resolveBotInstancePaths, type BotDesiredState, type BotStatus } from '@weiling-ai/shared';
 import { ApiError } from './api-error';
 import { getUserBotLimit, resolveInstancesRoot } from './env';
 import { getDatabaseClient, getRepositories } from './repositories';
@@ -32,6 +32,7 @@ export interface BotDetailItem extends BotSummaryItem {
   qrReissueRequestedAt: string | null;
   lastQrCodeId: string | null;
   lastQrCodeUrl: string | null;
+  qrCodeIssuedAt?: string | null;
   weixinAccountId: string | null;
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
@@ -52,9 +53,11 @@ export interface BotEventCursor {
 }
 
 export interface CreateBotInput {
+  desiredState?: BotDesiredState;
   ownerUserId: string;
   name: string;
   llmProfileId: string;
+  skipQuota?: boolean;
 }
 
 export interface DeleteBotResult {
@@ -127,11 +130,11 @@ export async function listBotEventsAfterCursor(
 export async function createBot(input: CreateBotInput): Promise<BotDetailItem> {
   const repositories = getRepositories();
   const databaseClient = getDatabaseClient();
-  const quota = await getBotCreationQuota(input.ownerUserId);
-  const userBotLimit = getUserBotLimit();
+  const quota = input.skipQuota ? null : await getBotCreationQuota(input.ownerUserId);
+  const userBotLimit = input.skipQuota ? null : getUserBotLimit();
   const llmProfile = await repositories.userLlmProfiles.findByIdForUser(input.llmProfileId, input.ownerUserId);
 
-  if (quota.isAtLimit && quota.limit !== null) {
+  if (quota?.isAtLimit && quota.limit !== null) {
     throw createBotLimitReachedError();
   }
 
@@ -174,7 +177,7 @@ export async function createBot(input: CreateBotInput): Promise<BotDetailItem> {
 
       tx.insert(botInstancesTable).values({
         createdAt: now,
-        desiredState: 'running',
+        desiredState: input.desiredState ?? 'running',
         id: botId,
         llmConfigId: llmProfile.id,
         model: llmProfile.model,
@@ -438,6 +441,7 @@ interface BotPersistenceRecord {
   qrReissueRequestedAt: Date | null;
   lastQrCodeId: string | null;
   lastQrCodeUrl: string | null;
+  qrCodeIssuedAt: Date | null;
   weixinAccountId: string | null;
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
@@ -471,6 +475,9 @@ function toBotDetailItem(bot: BotPersistenceRecord): BotDetailItem {
     qrReissueRequestedAt: toIsoString(bot.qrReissueRequestedAt),
     lastQrCodeId: bot.lastQrCodeId,
     lastQrCodeUrl: bot.lastQrCodeUrl,
+    qrCodeIssuedAt: toIsoString(
+      bot.qrCodeIssuedAt ?? (bot.status === 'waiting_for_qr' && bot.lastQrCodeUrl ? bot.updatedAt : null),
+    ),
     weixinAccountId: bot.weixinAccountId,
     lastErrorCode: bot.lastErrorCode,
     lastErrorMessage: bot.lastErrorMessage,

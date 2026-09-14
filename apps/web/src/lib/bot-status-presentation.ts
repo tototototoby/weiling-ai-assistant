@@ -1,4 +1,4 @@
-import type { BotDesiredState } from '@weclaws/shared';
+import type { BotDesiredState } from '@weiling-ai/shared';
 import type { Locale } from './locale';
 import { getMessages } from './locale';
 

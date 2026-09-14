@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600" viewBox="0 0 1600 600" role="img">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+
+  </defs>
+
+  <rect width="1600" height="600" rx="40" fill="url(#bg)"/>
+  <circle cx="1420" cy="90" r="210" fill="#FFD9D6" opacity="0.42" filter="url(#soft)"/>
+  <circle cx="1260" cy="520" r="260" fill="#B3E1F6" opacity="0.34" filter="url(#soft)"/>
+  <g transform="translate(1018 44) scale(.94)"><defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+
+  </defs>
+
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="256" r="228" fill="url(#pink)"/>
+    <circle cx="256" cy="256" r="171" fill="url(#blue)"/>
+    <circle cx="191" cy="252" r="24" fill="#FCABA7"/>
+    <circle cx="321" cy="252" r="24" fill="#FCABA7"/>
+    <path d="M226 306 C232 330 280 330 286 306" fill="none" stroke="#FCABA7" stroke-width="15" stroke-linecap="round"/>
+    <ellipse cx="210" cy="183" rx="66" ry="34" fill="#FFFFFF" opacity="0.18" transform="rotate(-20 210 183)"/>
+  </g></g>
+  <g transform="translate(1135 112)">
+    <rect x="0" y="0" width="98" height="44" rx="22" fill="#FFFFFF" opacity="0.92"/>
+    <text x="49" y="29" text-anchor="middle" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="700" fill="#19323C">微信</text>
+  </g>
+  <g transform="translate(1394 250)">
+    <rect x="0" y="0" width="98" height="44" rx="22" fill="#FFFFFF" opacity="0.92"/>
+    <text x="49" y="29" text-anchor="middle" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="700" fill="#19323C">飞书</text>
+  </g>
+  <g transform="translate(1092 452)">
+    <rect x="0" y="0" width="98" height="44" rx="22" fill="#FFFFFF" opacity="0.92"/>
+    <text x="49" y="29" text-anchor="middle" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="700" fill="#19323C">企微</text>
+  </g>
+  <text x="104" y="132" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="3" fill="#77C9EC">OPEN-SOURCE PERSONAL AI ASSISTANT</text>
+  <text x="104" y="226" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="66" font-weight="800" fill="#19323C">微Link · 微灵 AI 助手</text>
+  <text x="104" y="292" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="28" font-weight="500" fill="#56717A">不用多学一个软件，在熟悉的聊天窗口里，把事情交给微Link。</text>
+  <g><rect x="104" y="354" width="154" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="128" cy="377" r="6" fill="#FCABA7"/><text x="144" y="384" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">扫码即用</text></g>
+  <g><rect x="274" y="354" width="174" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="298" cy="377" r="6" fill="#FCABA7"/><text x="314" y="384" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">跨端记忆</text></g>
+  <g><rect x="464" y="354" width="226" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="488" cy="377" r="6" fill="#FCABA7"/><text x="504" y="384" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">服务端持续办事</text></g>
+  <g><rect x="706" y="354" width="174" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="730" cy="377" r="6" fill="#FCABA7"/><text x="746" y="384" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">主动跟进</text></g>
+  <text x="104" y="474" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="20" fill="#56717A">微信 · 企业微信 · 飞书 · Web</text>
+  <text x="104" y="520" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="17" fill="#78939C">独立开源项目 · 与各平台官方无隶属或授权关系</text>
+</svg>

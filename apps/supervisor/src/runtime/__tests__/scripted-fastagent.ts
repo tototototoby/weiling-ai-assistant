@@ -2,14 +2,16 @@ import { chmod, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export const RESTORED_ACCOUNT_ID = 'restored_acc_1';
-const TRUSTED_QR_CODE_URL = 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3';
+const TRUSTED_QR_CODE_URL = 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3';
 
 export type ScriptedFastAgentScenario =
   | 'invalid_json'
   | 'missing_qr_url'
+  | 'qr_login_happy'
   | 'restored_crash'
   | 'restored_happy'
   | 'stateful_restore_or_qr'
+  | 'stopped_without_exit_once'
   | 'startup_crash';
 
 export async function createScriptedFastAgentBinary(
@@ -19,7 +21,7 @@ export async function createScriptedFastAgentBinary(
   const binaryPath = join(dir, `fastagent-${scenario}.mjs`);
 
 const source = `#!/usr/bin/env node
-import { access } from 'node:fs/promises';
+import { access, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const agentId = process.env.IM_GATEWAY_AGENT_ID ?? 'bot_unknown';
@@ -31,6 +33,7 @@ let stopping = false;
 let keepAliveTimer = null;
 const TRUSTED_QR_CODE_URL = ${JSON.stringify(TRUSTED_QR_CODE_URL)};
 const RESTORED_ACCOUNT_ID = ${JSON.stringify(RESTORED_ACCOUNT_ID)};
+const STOPPED_WITHOUT_EXIT_MARKER = join(dataDir, '.stopped-without-exit-once');
 
 function emit(type, message, data) {
   process.stdout.write(JSON.stringify({
@@ -88,6 +91,47 @@ async function main() {
     });
     await delay(STEP_DELAY_MS);
     await stopGracefully('runtime_error');
+    return;
+  }
+
+  if (scenario === 'qr_login_happy') {
+    emit('qr_code', 'Weixin QR code ready', {
+      qrCodeUrl: TRUSTED_QR_CODE_URL,
+    });
+    await delay(STEP_DELAY_MS);
+    emit('login_confirmed', 'Weixin login confirmed', {
+      accountId: 'wx_acc_1',
+      userId: 'wx_user_1',
+    });
+    await delay(STEP_DELAY_MS);
+    emit('running', 'Bot running', {
+      accountId: 'wx_acc_1',
+    });
+    keepAliveTimer = setInterval(() => {}, 60_000);
+    return;
+  }
+
+  if (scenario === 'stopped_without_exit_once' && !(await fileExists(STOPPED_WITHOUT_EXIT_MARKER))) {
+    await writeFile(STOPPED_WITHOUT_EXIT_MARKER, 'failed once');
+    emit('running', 'IM runtime entered steady state', {
+      accountId: RESTORED_ACCOUNT_ID,
+      source: 'restored',
+    });
+    await delay(STEP_DELAY_MS);
+    emit('runtime_error', 'IM runtime failed', {
+      error: 'Runtime reported stopped but retained its process',
+    });
+    await delay(STEP_DELAY_MS);
+    stopping = true;
+    emit('stopping', 'IM runtime stopping', { reason: 'runtime_error' });
+    await delay(STEP_DELAY_MS);
+    emit('stopped', 'IM runtime stopped', {
+      exitCode: 1,
+      reason: 'runtime_error',
+    });
+    keepAliveTimer = setInterval(() => {
+      // Simulate a runtime that never exits, even after its terminal event.
+    }, 60_000);
     return;
   }
 
@@ -172,6 +216,15 @@ async function hasLoginState() {
   }
 
   return false;
+}
+
+async function fileExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 `;
 

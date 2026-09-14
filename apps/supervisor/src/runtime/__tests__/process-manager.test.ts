@@ -5,15 +5,18 @@ import { tmpdir } from 'node:os';
 import {
   BotEventRepository,
   BotInstanceRepository,
+  BotSandboxRuntimePoolRepository,
   UserLlmProfileRepository,
-  UserSandboxRuntimePoolRepository,
   UserRepository,
   WorkspaceRepository,
-  createDatabaseClient,
   migrateDatabase,
-} from '@weclaws/db';
-import { parseSandboxRuntimePoolDefaults, resolveBotInstancePaths } from '@weclaws/shared';
-import { acquireManagedSkillsLock, resolveManagedSkillsLockPath } from '@weclaws/shared/managed-skills';
+} from '@weiling-ai/db';
+import {
+  closeTrackedDatabaseClients,
+  createTrackedDatabaseClient as createDatabaseClient,
+} from './test-database-client';
+import { parseSandboxRuntimePoolDefaults, resolveBotInstancePaths } from '@weiling-ai/shared';
+import { acquireManagedSkillsLock, resolveManagedSkillsLockPath } from '@weiling-ai/shared/managed-skills';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupervisorConfig } from '../../config';
 import { ProcessManager } from '../process-manager';
@@ -26,12 +29,15 @@ import {
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  closeTrackedDatabaseClients();
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { force: true, recursive: true })));
 });
 
 describe('ProcessManager', () => {
-  it('spawns the mock runtime once, forwards stdout events, and stops gracefully', async () => {
-    const { botEvents, botInstances, bot, config, processManager, userSandboxRuntimePools } = await createProcessManagerHarness();
+  it.skipIf(process.platform === 'win32')(
+    'spawns the mock runtime once, forwards stdout events, and stops gracefully',
+    async () => {
+    const { botEvents, botInstances, bot, botSandboxRuntimePools, config, processManager } = await createProcessManagerHarness();
 
     expect(await processManager.startInstance(bot, {
       mockScenario: 'happy',
@@ -48,16 +54,16 @@ describe('ProcessManager', () => {
     });
 
     const runningBot = await botInstances.findById('bot_1');
-    const pool = await userSandboxRuntimePools.findByOwnerUserId('user_1');
+    const pool = await botSandboxRuntimePools.findByBotInstanceId('bot_1');
     const timeline = await botEvents.listByBotInstanceId('bot_1');
 
     expect(processManager.hasInstance('bot_1')).toBe(true);
     expect(pool).toMatchObject({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       port: 31_000,
     });
     expect(runningBot).toMatchObject({
-      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3',
+      lastQrCodeUrl: 'https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3',
       processPid: expect.any(Number),
       status: 'running',
       weixinAccountId: 'wx_acc_1',
@@ -84,9 +90,10 @@ describe('ProcessManager', () => {
 
     await processManager.dispose();
     void config;
-  });
+    },
+  );
 
-  it('marks the bot failed when the owner sandbox runtime pool is disabled', async () => {
+  it('marks the bot failed when its sandbox runtime pool is disabled', async () => {
     const { bot, botInstances, processManager } = await createProcessManagerHarness({
       disabledSandboxPool: true,
     });
@@ -130,9 +137,37 @@ describe('ProcessManager', () => {
     await processManager.dispose();
   });
 
+  it('force-terminates a child that emits stopped without exiting', async () => {
+    const { botEvents, botInstances, bot, processManager } = await createProcessManagerHarness({
+      binaryScenario: 'stopped_without_exit_once',
+    });
+
+    expect(await processManager.startInstance(bot)).toBe(true);
+
+    await waitFor(async () => {
+      const current = await botInstances.findById('bot_1');
+      return current?.restartCount === 1
+        && current.status === 'stopped'
+        && !processManager.hasInstance('bot_1');
+    });
+
+    const stoppedBot = await botInstances.findById('bot_1');
+    const timeline = await botEvents.listByBotInstanceId('bot_1');
+
+    expect(stoppedBot).toMatchObject({
+      restartBackoffUntil: expect.any(Date),
+      restartCount: 1,
+      status: 'stopped',
+    });
+    expect(timeline.filter((event) => event.type === 'runtime_error')).toHaveLength(1);
+    expect(timeline.filter((event) => event.type === 'stopped')).toHaveLength(1);
+
+    await processManager.dispose();
+  });
+
   it('marks the bot failed when the real FastAgent binary cannot be started', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { bot, botEvents, botInstances, config, userLlmProfiles, userSandboxRuntimePools } = await createProcessManagerHarness();
+    const { bot, botEvents, botInstances, botSandboxRuntimePools, config, userLlmProfiles } = await createProcessManagerHarness();
     const missingBinaryPath = join('/definitely-missing', 'fastagent');
     const processManager = new ProcessManager({
       botEvents,
@@ -141,7 +176,7 @@ describe('ProcessManager', () => {
         ...config,
         fastagentBinaryPath: missingBinaryPath,
       },
-      userSandboxRuntimePools,
+      botSandboxRuntimePools,
       userLlmProfiles,
     });
 
@@ -234,7 +269,9 @@ describe('ProcessManager', () => {
     await processManager.dispose();
   }, 15_000);
 
-  it('stops a restored runtime without treating the stop as a crash', async () => {
+  it.skipIf(process.platform === 'win32')(
+    'stops a restored runtime without treating the stop as a crash',
+    async () => {
     const { botEvents, botInstances, bot, processManager } = await createProcessManagerHarness({
       binaryScenario: 'restored_happy',
     });
@@ -272,9 +309,12 @@ describe('ProcessManager', () => {
     expect(timeline.map((event) => event.type)).not.toContain('runtime_error');
 
     await processManager.dispose();
-  });
+    },
+  );
 
-  it('terminates runtimes that emit invalid jsonl instead of leaving them running with stale state', async () => {
+  it.skipIf(process.platform === 'win32')(
+    'terminates runtimes that emit invalid jsonl instead of leaving them running with stale state',
+    async () => {
     const { botInstances, bot, processManager } = await createProcessManagerHarness({
       binaryScenario: 'invalid_json' as ScriptedFastAgentScenario,
     });
@@ -296,9 +336,12 @@ describe('ProcessManager', () => {
     });
 
     await processManager.dispose();
-  });
+    },
+  );
 
-  it('terminates runtimes when event application throws on malformed runtime output', async () => {
+  it.skipIf(process.platform === 'win32')(
+    'terminates runtimes when event application throws on malformed runtime output',
+    async () => {
     const { botInstances, bot, processManager } = await createProcessManagerHarness({
       binaryScenario: 'missing_qr_url' as ScriptedFastAgentScenario,
     });
@@ -320,7 +363,8 @@ describe('ProcessManager', () => {
     });
 
     await processManager.dispose();
-  });
+    },
+  );
 
   it('persists the resolved runtime provider and model snapshot before the bot reaches running', async () => {
     const { bot, botInstances, processManager, userLlmProfiles } = await createProcessManagerHarness();
@@ -382,6 +426,40 @@ describe('ProcessManager', () => {
     );
 
     expect(installedSkill).toBe('# Alpha');
+
+    await processManager.dispose();
+  });
+
+  it('keeps the global managed-skill filter when syncing before runtime spawn', async () => {
+    const { bot, botInstances, config, processManager } = await createProcessManagerHarness({
+      enabledManagedSkillNames: ['beta'],
+      managedBundle: {
+        skills: {
+          alpha: { 'SKILL.md': '# Alpha' },
+          beta: { 'SKILL.md': '# Beta' },
+        },
+        version: 'bundle-v1',
+      },
+    });
+
+    expect(await processManager.startInstance(bot, {
+      mockScenario: 'happy',
+      stepDelayMs: 10,
+    })).toBe(true);
+
+    await waitFor(async () => {
+      const current = await botInstances.findById('bot_1');
+      return current?.status === 'running';
+    });
+
+    await expect(readFile(
+      join(config.instancesRoot, 'bot_1', 'data', 'skills', 'beta', 'SKILL.md'),
+      'utf8',
+    )).resolves.toBe('# Beta');
+    await expect(readFile(
+      join(config.instancesRoot, 'bot_1', 'data', 'skills', 'alpha', 'SKILL.md'),
+      'utf8',
+    )).rejects.toMatchObject({ code: 'ENOENT' });
 
     await processManager.dispose();
   });
@@ -501,6 +579,7 @@ async function createProcessManagerHarness(input: {
   binaryScenario?: ScriptedFastAgentScenario;
   bindProfile?: boolean;
   disabledSandboxPool?: boolean;
+  enabledManagedSkillNames?: readonly string[];
   invalidProfileBinding?: boolean;
   invalidManagedManifest?: boolean;
   managedBundle?: {
@@ -526,7 +605,7 @@ async function createProcessManagerHarness(input: {
 
   const users = new UserRepository(client.db);
   const userLlmProfiles = new UserLlmProfileRepository(client.db);
-  const userSandboxRuntimePools = new UserSandboxRuntimePoolRepository(client.db);
+  const botSandboxRuntimePools = new BotSandboxRuntimePoolRepository(client.db);
   const workspaces = new WorkspaceRepository(client.db);
   const botInstances = new BotInstanceRepository(client.db);
   const botEvents = new BotEventRepository(client.db);
@@ -589,11 +668,11 @@ async function createProcessManagerHarness(input: {
   });
 
   if (input.disabledSandboxPool === true) {
-    await userSandboxRuntimePools.ensureForUser({
+    await botSandboxRuntimePools.ensureForBot({
+      botInstanceId: 'bot_1',
       defaults: parseSandboxRuntimePoolDefaults({}),
-      ownerUserId: 'user_1',
     });
-    await userSandboxRuntimePools.updateByOwnerUserId('user_1', {
+    await botSandboxRuntimePools.updateByBotInstanceId('bot_1', {
       enabled: false,
     });
   }
@@ -607,11 +686,16 @@ async function createProcessManagerHarness(input: {
   const config: SupervisorConfig = {
     databaseUrl: `file:${join(dir, 'test.sqlite')}`,
     fastagentBinaryPath,
+    internalApiToken: '',
+    internalPort: 8790,
     instancesRoot,
+    larkConfigRoot: instancesRoot,
+    larkCliPath: 'lark-cli',
     mockFastAgentFixturePath: fileURLToPath(
       new URL('../../../../../tests/fixtures/mock-fastagent.ts', import.meta.url),
     ),
     reconcileIntervalMs: 50,
+    reconcileStallTimeoutMs: 120_000,
     sandboxMode: 'remote',
     sandboxApiKey: null,
     sandboxUrl: null,
@@ -629,12 +713,15 @@ async function createProcessManagerHarness(input: {
     botInstances,
     config,
     userLlmProfiles,
-    userSandboxRuntimePools,
+    botSandboxRuntimePools,
     processManager: new ProcessManager({
       botEvents: wrapAsyncRepository(botEvents, input.applyDelayMs),
       botInstances: wrapAsyncRepository(botInstances, input.applyDelayMs),
       config,
-      userSandboxRuntimePools,
+      resolveEnabledManagedSkillNames: input.enabledManagedSkillNames === undefined
+        ? undefined
+        : async () => input.enabledManagedSkillNames ?? [],
+      botSandboxRuntimePools,
       userLlmProfiles,
     }),
   };

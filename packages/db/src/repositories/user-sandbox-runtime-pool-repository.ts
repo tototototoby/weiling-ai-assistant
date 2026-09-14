@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { posix } from 'node:path';
-import type { SandboxRuntimePoolDefaults } from '@weclaws/shared';
+import type { SandboxRuntimePoolDefaults } from '@weiling-ai/shared';
 import { asc, eq, ne } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../schema/index';

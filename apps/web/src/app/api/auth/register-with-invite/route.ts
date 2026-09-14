@@ -8,7 +8,6 @@ import {
   INVITE_RESERVATION_TTL_MS,
 } from '@/lib/auth-invite';
 import { isAdminEmail } from '@/lib/admin';
-import { getEnv } from '@/lib/env';
 import { getRepositories } from '@/lib/repositories';
 import { getDefaultUserName } from '@/lib/user-name';
 
@@ -133,8 +132,6 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
-    await ensureUserSandboxRuntimePool(responseBody.user.id, repositories);
-
     const response = Response.json({
       data: {
         user: responseBody.user,
@@ -195,21 +192,4 @@ function getSetCookieHeaders(headers: Headers): string[] {
 
   const setCookieHeader = headers.get('set-cookie');
   return setCookieHeader ? [setCookieHeader] : [];
-}
-
-async function ensureUserSandboxRuntimePool(
-  ownerUserId: string,
-  repositories: ReturnType<typeof getRepositories>,
-) {
-  try {
-    await repositories.userSandboxRuntimePools.ensureForUser({
-      defaults: getEnv().srtPoolDefaults,
-      ownerUserId,
-    });
-  } catch (error) {
-    console.error('Failed to provision user sandbox runtime pool after registration.', {
-      error,
-      ownerUserId,
-    });
-  }
 }

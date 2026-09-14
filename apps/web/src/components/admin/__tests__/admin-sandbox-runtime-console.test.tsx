@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import * as React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithLocale } from '@/test/render';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -15,23 +15,47 @@ vi.mock('next/navigation', () => ({
 }));
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+});
+
+it('polls runtime status so a later CPU sample becomes visible', async () => {
+  vi.useFakeTimers();
+  const refreshed = createPayload();
+  refreshed.manager = { ...refreshed.manager!, cpuPercent: 7.5 };
+  const fetchMock = vi.fn().mockResolvedValue({
+    json: async () => ({ data: refreshed, error: null }),
+    ok: true,
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const initial = createPayload();
+  initial.manager = { ...initial.manager!, cpuPercent: null };
+  renderWithLocale(<AdminSandboxRuntimeConsole initialData={initial} />, { locale: 'en' });
+  expect(screen.getByText('Unavailable')).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2_500);
+  });
+
+  expect(fetchMock).toHaveBeenCalledWith('/api/admin/sandbox-runtime/pools');
+  expect(screen.getByText('7.5%')).toBeInTheDocument();
 });
 
 it('shows manager and per-pool resource status without exposing API keys', () => {
   renderWithLocale(<AdminSandboxRuntimeConsole initialData={createPayload()} />, { locale: 'en' });
 
   expect(screen.getByText('Sandbox Runtime Pools')).toBeInTheDocument();
-  expect(screen.getByText('owner@example.com')).toBeInTheDocument();
+  expect(screen.getByText('Operations Bot')).toBeInTheDocument();
+  expect(screen.getByText(/owner@example\.com/)).toBeInTheDocument();
   expect(document.querySelector('[data-srt-pool-row]')).not.toBeNull();
   expect(screen.getByText('12.5%')).toBeInTheDocument();
   expect(screen.getByText('244.1 MB')).toBeInTheDocument();
-  expect(screen.getByText('31000')).toBeInTheDocument();
+  expect(screen.getAllByText('3')).toHaveLength(2);
   expect(screen.queryByText('Pool 3 · Min 1 · Max 1')).not.toBeInTheDocument();
   expect(screen.queryByText('http://sandbox-runtime:31000')).not.toBeInTheDocument();
-  expect(screen.getByText('API key configured')).toBeInTheDocument();
-  expect(screen.queryByText('secret')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/API key/i)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Edit Pool' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Restart Pool' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Save Config' })).not.toBeInTheDocument();
@@ -41,7 +65,7 @@ it('requests a pool restart and updates the visible restart timestamp', async ()
   const fetchMock = vi.fn().mockResolvedValue({
     json: async () => ({
       data: {
-        ownerUserId: 'user_1',
+        botInstanceId: 'bot_1',
         restartRequestedAt: '2026-05-02T03:00:00.000Z',
       },
       error: null,
@@ -56,7 +80,7 @@ it('requests a pool restart and updates the visible restart timestamp', async ()
   await userEvent.click(await screen.findByRole('button', { name: 'Restart Pool' }));
 
   await waitFor(() => {
-    expect(fetchMock).toHaveBeenCalledWith('/api/admin/sandbox-runtime/pools/user_1/restart', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/sandbox-runtime/pools/bot_1/restart', {
       method: 'POST',
     });
   });
@@ -84,21 +108,18 @@ it('saves edited pool capacity through the admin PATCH API', async () => {
   renderWithLocale(<AdminSandboxRuntimeConsole initialData={createPayload()} />, { locale: 'en' });
 
   await userEvent.click(screen.getByRole('button', { name: 'Edit Pool' }));
-  await userEvent.clear(await screen.findByLabelText('Pool Size for owner@example.com'));
-  await userEvent.type(screen.getByLabelText('Pool Size for owner@example.com'), '4');
+  await userEvent.clear(await screen.findByLabelText('Pool Size for Operations Bot'));
+  await userEvent.type(screen.getByLabelText('Pool Size for Operations Bot'), '4');
   await userEvent.click(screen.getByRole('button', { name: 'Save Config' }));
 
   await waitFor(() => {
-    expect(fetchMock).toHaveBeenCalledWith('/api/admin/sandbox-runtime/pools/user_1', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/sandbox-runtime/pools/bot_1', expect.objectContaining({
       body: JSON.stringify({
         enabled: true,
         healthCheckIntervalMs: 60_000,
         maxConcurrentInit: 1,
         minReadyProcesses: 1,
         poolSize: 4,
-        port: 31_000,
-        portRangeEnd: 9_199,
-        portRangeStart: 9_100,
         sessionTimeoutMs: 600_000,
       }),
       headers: {
@@ -118,20 +139,15 @@ it('blocks invalid cross-field values locally and shows field errors in the moda
   renderWithLocale(<AdminSandboxRuntimeConsole initialData={createPayload()} />, { locale: 'en' });
 
   await userEvent.click(screen.getByRole('button', { name: 'Edit Pool' }));
-  await userEvent.clear(await screen.findByLabelText('Pool Size for owner@example.com'));
-  await userEvent.type(screen.getByLabelText('Pool Size for owner@example.com'), '1');
-  await userEvent.clear(screen.getByLabelText('Min Ready for owner@example.com'));
-  await userEvent.type(screen.getByLabelText('Min Ready for owner@example.com'), '2');
-  await userEvent.clear(screen.getByLabelText('Port Range Start for owner@example.com'));
-  await userEvent.type(screen.getByLabelText('Port Range Start for owner@example.com'), '9200');
-  await userEvent.clear(screen.getByLabelText('Port Range End for owner@example.com'));
-  await userEvent.type(screen.getByLabelText('Port Range End for owner@example.com'), '9100');
+  await userEvent.clear(await screen.findByLabelText('Pool Size for Operations Bot'));
+  await userEvent.type(screen.getByLabelText('Pool Size for Operations Bot'), '1');
+  await userEvent.clear(screen.getByLabelText('Min Ready for Operations Bot'));
+  await userEvent.type(screen.getByLabelText('Min Ready for Operations Bot'), '2');
 
   await userEvent.click(screen.getByRole('button', { name: 'Save Config' }));
 
   expect(fetchMock).not.toHaveBeenCalled();
   expect(await screen.findByText('Min Ready must be less than or equal to Pool Size.')).toBeInTheDocument();
-  expect(screen.getByText('Port Range Start must be less than or equal to Port Range End.')).toBeInTheDocument();
 });
 
 it('does not expose workspaceBasePath as an editable field in the modal', async () => {
@@ -139,7 +155,9 @@ it('does not expose workspaceBasePath as an editable field in the modal', async 
 
   await userEvent.click(screen.getByRole('button', { name: 'Edit Pool' }));
 
-  expect(screen.queryByLabelText('Workspace Base Path for owner@example.com')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Workspace Base Path for Operations Bot')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Port for Operations Bot')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Port Range Start for Operations Bot')).not.toBeInTheDocument();
 });
 
 function createPayload(): AdminSandboxRuntimePoolsPayload {
@@ -160,7 +178,8 @@ function createPayload(): AdminSandboxRuntimePoolsPayload {
     },
     pools: [
       {
-        apiKeyConfigured: true,
+        botInstanceId: 'bot_1',
+        botName: 'Operations Bot',
         createdAt: '2026-05-02T01:00:00.000Z',
         defaultAllowRead: [],
         defaultAllowWrite: ['/tmp'],
@@ -175,9 +194,6 @@ function createPayload(): AdminSandboxRuntimePoolsPayload {
         ownerEmail: 'owner@example.com',
         ownerUserId: 'user_1',
         poolSize: 3,
-        port: 31_000,
-        portRangeEnd: 9_199,
-        portRangeStart: 9_100,
         restartRequestedAt: null,
         runtime: {
           activeSessions: null,
@@ -192,11 +208,9 @@ function createPayload(): AdminSandboxRuntimePoolsPayload {
           rssBytes: 256_000_000,
           startedAt: '2026-05-02T02:00:00.000Z',
           state: 'running',
-          url: 'http://sandbox-runtime:31000',
         },
         sessionTimeoutMs: 600_000,
         updatedAt: '2026-05-02T01:10:00.000Z',
-        workspaceBasePath: '/app/apps/sandbox-runtime/user-workspaces/user_1',
       },
     ],
     statusUpdatedAt: '2026-05-02T02:00:00.000Z',

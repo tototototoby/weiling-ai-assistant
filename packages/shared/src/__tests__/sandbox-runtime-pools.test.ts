@@ -8,7 +8,7 @@ import {
 } from '../sandbox-runtime-pools';
 
 describe('parseSandboxRuntimePoolDefaults', () => {
-  it('parses approved per-user sandbox runtime pool defaults', () => {
+  it('parses approved per-Bot sandbox runtime pool defaults', () => {
     expect(parseSandboxRuntimePoolDefaults({})).toEqual({
       defaultAllowRead: [],
       defaultAllowWrite: ['/tmp'],
@@ -47,15 +47,15 @@ describe('parseSandboxRuntimePoolDefaults', () => {
       healthCheckIntervalMs: 60_000,
       maxConcurrentInit: 1,
       minReadyProcesses: 1,
-      poolSize: 3,
+      poolSize: 1,
       portBase: 31_000,
       portRangeWidth: 100,
       proxyPortBase: 9_100,
       sessionTimeoutMs: 600_000,
       workspaceBaseRoot: '/app/apps/sandbox-runtime/user-workspaces',
     });
-    expect(SRT_POOL_CONFIG_FILE_VERSION).toBe(1);
-    expect(SRT_POOL_STATUS_FILE_VERSION).toBe(1);
+    expect(SRT_POOL_CONFIG_FILE_VERSION).toBe(2);
+    expect(SRT_POOL_STATUS_FILE_VERSION).toBe(2);
   });
 
   it('parses env overrides and trims comma separated lists', () => {

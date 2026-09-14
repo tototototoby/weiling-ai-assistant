@@ -11,11 +11,11 @@ This skill provides guidance for creating effective FastAgent-compatible skills.
 
 FastAgent consumes directory-based skills that contain a `SKILL.md` file and optional supporting files.
 
-In WeClaws:
+In weiling:
 
 - Official managed skill sources live in `resources/skills/<layer>/<skill-name>`
 - Runtime managed copies are synced into each bot's `data/skills`
-- `workspace/.fastagent/skills` remains user-managed and is not touched by WeClaws
+- `workspace/.fastagent/skills` remains user-managed and is not touched by weiling
 
 Treat the skill directory itself as the primary deliverable. Optional archives are only for transport or backup.
 
@@ -147,8 +147,8 @@ Extract text with pdfplumber:
 
 ## Advanced features
 
-- **Form filling**: See [FORMS.md](FORMS.md) for complete guide
-- **API reference**: See [REFERENCE.md](REFERENCE.md) for all methods
+- **Form filling**: See `FORMS.md`（上游扩展参考，当前 bundle 不包含） for complete guide
+- **API reference**: See `REFERENCE.md`（上游扩展参考，当前 bundle 不包含） for all methods
 - **Examples**: See [EXAMPLES.md](EXAMPLES.md) for common patterns
 ```
 
@@ -302,7 +302,7 @@ The script:
 
 After initialization, customize the SKILL.md and add resources as needed. If you used `--examples`, replace or delete placeholder files.
 
-For WeClaws-managed skills, move the finished directory into the appropriate source bundle such as `resources/skills/managed/<skill-name>` after review.
+For weiling-managed skills, move the finished directory into the appropriate source bundle such as `resources/skills/managed/<skill-name>` after review.
 
 ### Step 4: Edit the Skill
 

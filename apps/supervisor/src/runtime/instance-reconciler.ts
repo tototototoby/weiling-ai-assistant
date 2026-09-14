@@ -1,7 +1,9 @@
-import type { BotInstanceRepository } from '@weclaws/db';
+import type { BotInstanceRepository } from '@weiling-ai/db';
 import { InstanceLock } from './instance-lock';
 import { isProcessAlive, stopTrackedProcess } from './process-identity';
 import { ProcessManager } from './process-manager';
+
+const PROCESS_HEARTBEAT_INTERVAL_MS = 30_000;
 
 export interface InstanceReconcilerDependencies {
   botInstances: BotInstanceRepository;
@@ -84,6 +86,16 @@ export class InstanceReconciler {
               await this.processManager.stopInstance(latest.id);
               return;
             }
+          }
+
+          if (this.processManager.hasInstance(latest.id)) {
+            if (
+              !latest.heartbeatAt
+              || now.getTime() - latest.heartbeatAt.getTime() >= PROCESS_HEARTBEAT_INTERVAL_MS
+            ) {
+              await this.botInstances.recordHeartbeat(latest.id, now);
+            }
+            return;
           }
 
           if (!this.processManager.hasInstance(latest.id)) {

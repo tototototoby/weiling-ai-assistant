@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="240" viewBox="0 0 1080 240" role="img">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+
+  </defs>
+
+  <g transform="translate(18 18) scale(.40)">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+
+  </defs>
+
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="256" r="228" fill="url(#pink)"/>
+    <circle cx="256" cy="256" r="171" fill="url(#blue)"/>
+    <circle cx="191" cy="252" r="24" fill="#FCABA7"/>
+    <circle cx="321" cy="252" r="24" fill="#FCABA7"/>
+    <path d="M226 306 C232 330 280 330 286 306" fill="none" stroke="#FCABA7" stroke-width="15" stroke-linecap="round"/>
+    <ellipse cx="210" cy="183" rx="66" ry="34" fill="#FFFFFF" opacity="0.18" transform="rotate(-20 210 183)"/>
+  </g>
+</g>
+  <text x="255" y="112" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="68" font-weight="800" fill="#19323C">weiling</text>
+  <circle cx="498" cy="92" r="6" fill="#FCABA7"/>
+  <text x="528" y="112" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="58" font-weight="750" fill="#19323C">微Link AI 助手</text>
+  <text x="258" y="160" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="500" fill="#56717A">在熟悉的聊天窗口里，把事情交给微Link</text>
+</svg>

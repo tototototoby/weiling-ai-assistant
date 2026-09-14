@@ -18,13 +18,21 @@ const BRAND_VARIANTS = {
 type BrandVariant = keyof typeof BRAND_VARIANTS;
 
 interface BrandLockupProps {
+  avatarFallback?: string;
   className?: string;
+  frameClassName?: string;
+  imageUrl?: string | null;
+  label?: string;
   labelClassName?: string;
   variant?: BrandVariant;
 }
 
 export function BrandLockup({
+  avatarFallback,
   className,
+  frameClassName,
+  imageUrl,
+  label = '微Link · 微灵 AI 助手',
   labelClassName,
   variant = 'compact',
 }: BrandLockupProps) {
@@ -35,19 +43,36 @@ export function BrandLockup({
       <span
         data-brand-frame=""
         className={cn(
-          'inline-flex shrink-0 overflow-hidden border border-black/10 bg-black shadow-[0_18px_40px_-28px_rgba(15,15,15,0.92)]',
+          'inline-flex shrink-0 items-center justify-center overflow-hidden border border-black/10 bg-primary font-semibold text-primary-foreground shadow-[0_18px_40px_-28px_rgba(15,15,15,0.92)]',
           styles.frame,
+          frameClassName,
         )}
       >
-        <img
-          alt="WeClaws logo"
-          className="h-full w-full object-cover"
-          decoding="async"
-          height="720"
-          loading="lazy"
-          src="/brand/logo-black.png"
-          width="720"
-        />
+        {imageUrl ? (
+          <img
+            alt={`${label} avatar`}
+            className="h-full w-full object-cover"
+            decoding="async"
+            height="720"
+            loading="lazy"
+            src={imageUrl}
+            width="720"
+          />
+        ) : avatarFallback ? (
+          <span aria-label={`${label} avatar`} className="text-base uppercase">
+            {avatarFallback.slice(0, 1)}
+          </span>
+        ) : (
+          <img
+            alt="微Link · 微灵 AI 助手 logo"
+            className="h-full w-full object-cover"
+            decoding="async"
+            height="720"
+            loading="lazy"
+            src="/brand/weiling-mark.png"
+            width="720"
+          />
+        )}
       </span>
       <span
         data-brand-label=""
@@ -57,7 +82,7 @@ export function BrandLockup({
           labelClassName,
         )}
       >
-        WeClaws
+        {label}
       </span>
     </div>
   );

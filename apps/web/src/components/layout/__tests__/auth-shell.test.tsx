@@ -43,3 +43,26 @@ it('renders the shared product hero and a wider auth card next to route-specific
   expect(container.querySelector('[data-auth-hero-brand] [data-brand-label]')).toHaveClass('text-[18px]');
   expect(container.querySelector('[data-auth-card]')).toHaveClass('w-full', 'max-w-none', 'lg:max-w-[42rem]');
 });
+
+it('supports route-specific branding without changing the shared authentication shell', () => {
+  const { container } = renderWithLocale(
+    <AuthShell
+      brandImageUrl="/brand/weiling-mark.png"
+      brandLabel="微Link · 微灵 AI 助手"
+      eyebrow="企业员工邀请"
+      footer={<span>员工清单验证</span>}
+      heroDescription="领取团队智能助理。"
+      heroHighlights={[]}
+      heroTitle="领取你的智能助理"
+      subtitle="输入姓名或昵称。"
+      title="验证员工身份"
+    >
+      <div>Form body</div>
+    </AuthShell>,
+    { locale: 'zh-CN' }
+  );
+
+  expect(screen.getAllByText('微Link · 微灵 AI 助手')).toHaveLength(2);
+  expect(screen.getAllByAltText('微Link · 微灵 AI 助手 avatar')).toHaveLength(2);
+  expect(container.querySelector('[data-auth-hero-brand] [data-brand-frame]')).toHaveClass('h-[4.5rem]', 'w-[4.5rem]');
+});

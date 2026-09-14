@@ -10,9 +10,8 @@ apps/*/.next
 apps/*/node_modules
 packages/*/node_modules
 
-storage/instances/*
+storage/**
 !storage/instances/.gitkeep
-storage/sqlite/*.sqlite
 
 tests
 docs

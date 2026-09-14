@@ -313,7 +313,7 @@ def init_skill(skill_name, path, resources, include_examples):
     else:
         print("2. Create resource directories only if needed (scripts/, references/, assets/)")
     print("3. Run the validator when ready to check the skill structure")
-    print("4. For WeClaws-managed skills, copy the finished directory into resources/skills/<layer>/")
+    print("4. For weiling-managed skills, copy the finished directory into resources/skills/<layer>/")
 
     return skill_dir
 

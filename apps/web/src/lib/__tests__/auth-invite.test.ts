@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   BOOTSTRAP_REGISTRATION_TOKEN_FIELD,
+  EMPLOYEE_ONBOARDING_TOKEN_FIELD,
   INVITE_RESERVATION_TOKEN_FIELD,
   INVITE_RESERVATION_TTL_MS,
   inviteOnlyRegistrationPlugin,
@@ -42,6 +43,26 @@ describe('invite-only auth helpers', () => {
       body: {
         code: 'INVITE_REQUIRED',
       },
+    });
+  });
+
+  it('accepts a live private employee onboarding reservation and strips its token', async () => {
+    const result = await validateInviteReservation({
+      body: {
+        email: 'employee.id@weiling.invalid',
+        [EMPLOYEE_ONBOARDING_TOKEN_FIELD]: 'employee_reservation',
+        password: 'generated-password',
+      },
+      findReservationByToken: vi.fn(),
+      findEmployeeOnboardingByToken: vi.fn().mockResolvedValue({
+        reservedAt: new Date('2026-04-02T00:00:00.000Z'),
+      }),
+      now: new Date('2026-04-02T00:04:59.000Z'),
+    });
+
+    expect(result.cleanedBody).toEqual({
+      email: 'employee.id@weiling.invalid',
+      password: 'generated-password',
     });
   });
 

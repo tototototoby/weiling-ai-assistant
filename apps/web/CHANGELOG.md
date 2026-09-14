@@ -1,5 +1,199 @@
 # CHANGELOG
 
+## Unreleased
+
+### Security
+
+- Upgraded Next.js to 16.3.5 and Better Auth to 1.6.31, with patched transitive `ws`, `postcss`, `nanoid`, `shell-quote`, Sharp, Vitest, and esbuild versions verified by a clean production dependency audit.
+- Marked the runtime-only workspace-relative storage path as excluded from Turbopack static tracing so standalone output does not pull the entire repository into the server bundle.
+
+## Unreleased (Admin Reports, Groups, Team Console)
+
+### Added
+
+- `/admin/groups` employee group management and `/admin/reports` operational reports (Bot activity, delivery status, email volume over 7/30-day windows).
+- Employee team and task consoles at `/me/team` and `/me/tasks`, plus a "我的团队" block in the Bot workbench.
+- Admin configuration cards for broadcast authorization, delivery-health checks, and poster image generation (API keys never echoed).
+
+### Fixed
+
+- Reports API coerces the `days` query parameter to a number before validation so the 7/30-day tabs work.
+- Report window includes today; the label reads "最近 N 天（含今天）".
+
+## Unreleased (Employee Chat Console)
+
+### Added
+
+- Added a dedicated employee web chat console at `/chat/login` and `/chat`, with a left-side owned-Bot list, streaming chat panel, change-password dialog, and sign-out.
+- Added bilingual `chat.*` messages for employee login, assistant selection, password change, and sign-out.
+
+### Changed
+
+- Non-administrator post-login routing now sends authenticated users to `/chat` instead of the owner-only `/bots` workbench.
+- 2026-08-14 production employee accounts and Bot ownership were provisioned directly against SQLite; the six employees with company email can now sign in and see only their own assistants.
+
+### Notes
+
+- Default employee passwords are distributed out-of-band and should be changed on first sign-in.
+- The release uses directory `20260814-employee-chat-v37` and image `weclaws-gaozhiling/web:20260814-employee-chat-v37`; do not confuse it with the supervisor QR v37 image.
+
+## Unreleased (Global Email Notifications)
+
+### Added
+
+- Added employee company-email editing, global SMTP administration, email/both-channel administrator notices, and delivery history to `/admin/messages`.
+
+### Fixed
+
+- Added Web-to-queue regression coverage for selected email recipients and missing employee addresses.
+- Employee PATCH requests now preserve a manually configured company email when the field is omitted.
+- Automatic company-email derivation now applies only to 2-8 character Chinese legal names, preventing aliases such as `toby` from being stored as guessed addresses.
+
+## Unreleased (Global Message Copy Administration)
+
+### Added
+
+- Added administrator visibility into masked pending/cooldown WeCom identity sessions and an HMAC-token reset action backed by the durable onboarding repository.
+- Added a browser-safe 16-field message-copy contract for assistant identity, meal reminders, morning briefings, personal Weixin acknowledgements, WeCom status replies, and first-binding prompts.
+- Added `/admin/messages` editing, restore-defaults, revision status, and full-snapshot PATCH behavior without allowing Web to perform runtime delivery.
+
+### Fixed
+
+- Aligned Web and database validation at 80 characters for the assistant name and 4,000 characters for other copy, with exact template syntax and C0/C1 control-character rejection.
+- Added field-level browser validation so line breaks and malformed template variables are blocked before submission.
+- Employee invite claims now keep the QR-share handoff on the origin that served the invite page, so temporary tunnels and reverse proxies do not redirect external employees back to the configured private `APP_BASE_URL`.
+
+### Changed
+
+- Branded the employee invite claim page with the former deployment-specific identity while leaving login and registration branding unchanged.
+
+## Unreleased (Bot-Centric WeCom Administration)
+
+### Changed
+
+- Moved WeCom binding, enablement, proactive preference, telemetry, and unbinding into each administrator Bot detail page.
+- Changed `/admin/wecom` into the global long-connection configuration and Bot channel overview; an empty employee directory no longer blocks WeCom setup.
+- Added administrator-only `/api/admin/bots/[id]/wecom` GET/PATCH/DELETE endpoints backed directly by Bot-owned bindings.
+
+## Unreleased (Role-Aware Authentication Redirects)
+
+### Fixed
+
+- Authenticated administrators now enter `/admin/bots` from the home, login, and registration routes instead of being sent to the owner-only `/bots` workspace.
+- Successful sign-in and sign-up flows now return through the server-owned home route so role routing remains centralized.
+
+## Unreleased (Deferred Administrator Messages)
+
+### Added
+
+- Added a global administrator setting that keeps exhausted proactive-message deliveries waiting until the recipient returns, with durable queue status shown in `/admin/messages`.
+- Added authenticated GET/PATCH API coverage for the failed-message policy and localized `waiting_for_user` presentation.
+
+## Unreleased (WeCom Administration)
+
+### Added
+
+- Added `/admin/wecom` with redacted global long-connection credentials, durable connection status, and per-employee WeCom channel bindings to existing claimed Bots.
+- Added administrator-only APIs for revisioned WeCom configuration and employee binding, preference, enablement, and unbinding actions.
+- Added a durable reconnect action that asks Supervisor to replace the active connection without Web opening an SDK connection.
+
+## Unreleased (Morning Briefing Delivery Backoff)
+
+### Changed
+
+- Morning briefing administration now distinguishes retry-scheduled failures from Weixin sessions that need the user to send a new message.
+
+## Unreleased (Central Morning Briefing Administration)
+
+### Changed
+
+- Morning briefing and Bot administration now use the Supervisor central schedule as runtime truth instead of requiring a FastAgent cron task ID.
+- The administration UI shows next central delivery, last successful delivery, and retryable delivery errors; skipped Agent setup no longer appears as an incomplete briefing setup.
+
+## Unreleased (Morning Briefing Runtime Truth)
+
+### Fixed
+
+- Morning briefing and Bot administration now show confirmed runtime scheduling separately from policy intent, including setup-required, expired, cleanup-pending, and unknown states.
+- Summary counts and filters use actual future FastAgent schedules instead of treating every enabled policy as an active briefing.
+
+## Unreleased (Per-Bot Sandbox Administration)
+
+### Changed
+
+- Sandbox runtime administration now lists and controls one isolated pool per Bot, with Bot and owner metadata resolved without exposing API keys, ports, or host paths.
+- Pool capacity, readiness, health timing, enablement, and restart actions are independently configurable per Bot.
+- User registration no longer provisions the retained legacy user-level pool; Supervisor provisions a Bot pool on first start.
+
+## Unreleased (RAGFlow Administration)
+
+### Added
+
+- Added `/admin/ragflow` with administrator-only configuration and connection-test APIs, redacted API-key handling, Dataset ID and knowledge-base settings, and per-Bot revision sync status.
+
+## Unreleased (Administrator Messaging)
+
+### Added
+
+- Added `/admin/messages` and its admin-only API for all-user or selected-Bot messages. Submissions are durable SQLite delivery intents, with live polling while Supervisor deliveries are pending.
+
+## Unreleased (LLM Profiles Admin Migration)
+
+### Changed
+
+- Migrated administrator LLM Profile management to `/admin/llm-profiles`, including profile CRUD and onboarding default-model selection within the admin shell.
+- Administrator links from the account menu, Bot creation flow, and legacy `/settings` route now resolve to the new admin page; non-administrator users retain the owner-scoped `/settings` page and APIs.
+
+## Unreleased (QR Expiry And Bot Cleanup)
+
+### Added
+
+- QR codes now expire after 10 minutes across owner, administrator, and public share views. Public share holders can request a fresh code after expiry without a WeClaws account.
+- Public QR responses and failures are marked `cache-control: no-store`; concurrent share-link enables now return the canonical persisted token.
+- Employee onboarding stores the claimed Bot association, allowing a timed-out response to recover the same public QR link on retry.
+
+### Changed
+
+- Onboarding Bots are created stopped, claimed, and only then started, preventing a failed claim from racing Supervisor into an orphaned runtime.
+- If the first start intent fails after claiming, the claimed Bot is retained and a retry with the same invite and name requests it again instead of leaving a dangling employee claim.
+- Employee onboarding-created Bots bypass the per-user creation quota because they are administrator-managed employee resources.
+
+## Unreleased (Employee Onboarding)
+
+### Added
+
+- Added administrator employee directory maintenance and reusable invitation links under `/admin/invites`.
+- Added name-or-nickname validated `/join/[token]` onboarding that creates a Bot from the configured default model and sends the claimant directly to its public QR share page without creating a WeClaws login account.
+- Added administrator-only selection of the global onboarding default model in Settings.
+- Added administrator deletion for claimed or unclaimed employee-directory records. Employee deletion intentionally does not delete the separately managed Bot.
+- Added administrator Bot deletion from `/admin/bots/[id]`, guarded by the existing fully-stopped Bot invariant.
+
+## Unreleased
+
+### Added
+
+- Added the administrator-only `/admin/dify` console and APIs for global Dify configuration, server-side connection testing, API-key redaction, and per-Bot MCP publication status.
+- Added audited Bot-specific Agent presets to the administrator Bot detail page, including append-only `AGENTS.md` / `SOUL.md` guidance, projection status, history, rollback, and restore-global-default actions.
+- Added `/admin/bots/new` and an admin-shell Create Bot action. Administrators now create Bots without leaving the admin console, and successful creation returns to the admin Bot detail route.
+- Added the unified `/admin/global-agent` console for editing the shared `AGENTS.md` and `SOUL.md`, enabling or disabling managed Skills, republishing the current revision, and inspecting per-Bot projection status without leaving the admin shell.
+- Added administrator-only global Agent APIs backed by SQLite revisioned intent; workspace files remain Supervisor-owned projections and Skill source is read-only in the browser.
+- 新增管理台内的跨用户 Bot 清单与详情页 `/admin/bots`、`/admin/bots/[id]`，集中展示 Owner、运行/期望状态、模型和晨报同步摘要；管理员导航不再跳到普通 `/bots`。
+- 新增管理员 Bot 运行命令接口，支持在确认后通过持久化意图启动、停止或重启 Bot，并继续由 Supervisor 收敛真实进程状态。
+- 新增管理员晨报管理页 `/admin/morning-briefings`，支持全量摘要、搜索筛选、全员或选中 Bot 批量启停/应用默认值，以及单 Bot 城市、时间和强制启用策略编辑。
+- 新增管理员晨报 GET/PATCH API 和服务层校验，页面展示员工退出保护、Bot 运行状态、同步状态、目标/已应用版本、上次同步与错误，并明确 FastAgent 当前会话 cron 对账边界。
+
+### Changed
+
+- Rebranded the public QR share page with the former deployment-specific identity, clearer scan guidance, and a plain-language privacy and permissions notice that distinguishes chat handling from unrelated Weixin account access or actions.
+- Added the supplied deployment avatar as the former default admin brand image, while preserving a future account-specific avatar override.
+- The admin rail used the signed-in administrator avatar (with an account-initial fallback) and the former custom label instead of the upstream WeClaws brand lockup.
+
+### Fixed
+
+- Restored persistent QR sharing in the admin Bot detail page through administrator-only GET/POST/DELETE share APIs; “Open QR page” remains the current raw Weixin URL, while the generated share link follows future QR refreshes.
+- Fixed the admin Bot detail page so `waiting_for_qr` Bots render their current Weixin QR code, receive live status/QR/event updates through an administrator-only SSE route, and support administrator QR reissue without falling back to the owner console.
+- 修正 Vitest 的 `@` 源码别名，使管理台组件测试能按仓库规定的根级测试入口解析 `@/...` 导入。
+
 ## 2026-05-18
 
 ### Changed

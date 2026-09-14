@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, gt, lte, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { botEvents } from '../schema/bot-events';
 import type * as schema from '../schema/index';
@@ -63,6 +63,18 @@ export class BotEventRepository {
       : eq(botEvents.botInstanceId, botInstanceId);
 
     return this.selectByBotInstanceId(filter, 'asc');
+  }
+
+  async countByTypeBetween(type: string, from: Date, to: Date): Promise<number> {
+    const rows = this.db.select({ value: count() })
+      .from(botEvents)
+      .where(and(
+        eq(botEvents.type, type),
+        gte(botEvents.createdAt, from),
+        lte(botEvents.createdAt, to),
+      ))
+      .all();
+    return rows[0]?.value ?? 0;
   }
 
   private selectByBotInstanceId(

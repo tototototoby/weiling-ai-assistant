@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { UserSandboxRuntimePoolRecord } from '@weclaws/db';
+import type { BotSandboxRuntimePoolRecord } from '@weiling-ai/db';
 import { ApiError } from '../api-error';
 import {
   listAdminSandboxRuntimePools,
@@ -12,26 +12,31 @@ import {
 
 const tempDirs: string[] = [];
 
-const userSandboxRuntimePools = {
-  findByOwnerUserId: vi.fn(),
+const botSandboxRuntimePools = {
+  findByBotInstanceId: vi.fn(),
   listAll: vi.fn(),
   requestRestart: vi.fn(),
-  updateByOwnerUserId: vi.fn(),
+  updateByBotInstanceId: vi.fn(),
+};
+const botInstances = {
+  findById: vi.fn(),
 };
 const users = {
   findById: vi.fn(),
 };
 const repositories = {
-  userSandboxRuntimePools,
+  botInstances,
+  botSandboxRuntimePools,
   users,
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  userSandboxRuntimePools.findByOwnerUserId.mockReset();
-  userSandboxRuntimePools.listAll.mockReset();
-  userSandboxRuntimePools.requestRestart.mockReset();
-  userSandboxRuntimePools.updateByOwnerUserId.mockReset();
+  botInstances.findById.mockReset();
+  botSandboxRuntimePools.findByBotInstanceId.mockReset();
+  botSandboxRuntimePools.listAll.mockReset();
+  botSandboxRuntimePools.requestRestart.mockReset();
+  botSandboxRuntimePools.updateByBotInstanceId.mockReset();
   users.findById.mockReset();
 });
 
@@ -40,8 +45,8 @@ afterEach(async () => {
 });
 
 describe('sandbox-runtime admin service', () => {
-  it('lists configured pools with owner emails, runtime status, and no API key material', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'weclaws-srt-admin-status-'));
+  it('lists configured pools with bot and owner metadata without infrastructure secrets', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'weiling-srt-admin-status-'));
     tempDirs.push(dir);
     const statusFilePath = join(dir, 'srt-pool-status.json');
     await writeFile(statusFilePath, JSON.stringify({
@@ -58,19 +63,23 @@ describe('sandbox-runtime admin service', () => {
       pools: [
         {
           cpuPercent: 12.5,
-          ownerUserId: 'user_1',
+          botInstanceId: 'bot_1',
           pid: 456,
           readyProcesses: null,
           rssBytes: 256_000_000,
           state: 'running',
-          url: 'http://sandbox-runtime:31000',
         },
       ],
       updatedAt: '2026-05-02T02:00:00.000Z',
-      version: 1,
+      version: 2,
     }));
 
-    userSandboxRuntimePools.listAll.mockResolvedValue([createPoolRecord()]);
+    botSandboxRuntimePools.listAll.mockResolvedValue([createPoolRecord()]);
+    botInstances.findById.mockResolvedValue({
+      id: 'bot_1',
+      name: 'Operations Bot',
+      ownerUserId: 'user_1',
+    });
     users.findById.mockResolvedValue({
       email: 'owner@example.com',
       id: 'user_1',
@@ -84,7 +93,8 @@ describe('sandbox-runtime admin service', () => {
     expect(result.manager?.state).toBe('running');
     expect(result.pools).toEqual([
       expect.objectContaining({
-        apiKeyConfigured: true,
+        botInstanceId: 'bot_1',
+        botName: 'Operations Bot',
         ownerEmail: 'owner@example.com',
         ownerUserId: 'user_1',
         runtime: expect.objectContaining({
@@ -96,10 +106,15 @@ describe('sandbox-runtime admin service', () => {
       }),
     ]);
     expect(result.pools[0]).not.toHaveProperty('apiKey');
+    expect(result.pools[0]).not.toHaveProperty('port');
+    expect(result.pools[0]).not.toHaveProperty('portRangeStart');
+    expect(result.pools[0]).not.toHaveProperty('workspaceBasePath');
+    expect(result.pools[0].runtime).not.toHaveProperty('url');
   });
 
   it('tolerates a missing runtime status file while still returning configured pools', async () => {
-    userSandboxRuntimePools.listAll.mockResolvedValue([createPoolRecord()]);
+    botSandboxRuntimePools.listAll.mockResolvedValue([createPoolRecord()]);
+    botInstances.findById.mockResolvedValue(null);
     users.findById.mockResolvedValue(null);
 
     const result = await listAdminSandboxRuntimePools({
@@ -110,13 +125,14 @@ describe('sandbox-runtime admin service', () => {
     expect(result.manager).toBeNull();
     expect(result.pools[0]).toEqual(expect.objectContaining({
       ownerEmail: null,
+      botName: null,
       runtime: null,
     }));
   });
 
   it('rejects patch payloads that try to write API key material', async () => {
     await expect(updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       payload: {
         apiKey: 'secret',
       },
@@ -125,15 +141,15 @@ describe('sandbox-runtime admin service', () => {
       code: 'SRT_POOL_INVALID_CONFIG',
       status: 400,
     });
-    expect(userSandboxRuntimePools.updateByOwnerUserId).not.toHaveBeenCalled();
+    expect(botSandboxRuntimePools.updateByBotInstanceId).not.toHaveBeenCalled();
   });
 
   it('sanitizes fatal linux deny paths before returning or persisting pool config', async () => {
-    userSandboxRuntimePools.listAll.mockResolvedValue([createPoolRecord({
+    botSandboxRuntimePools.listAll.mockResolvedValue([createPoolRecord({
       defaultDenyRead: ['/etc/passwd', '/etc/mtab', '/proc/mounts'],
     })]);
     users.findById.mockResolvedValue(null);
-    userSandboxRuntimePools.updateByOwnerUserId.mockResolvedValue(createPoolRecord({
+    botSandboxRuntimePools.updateByBotInstanceId.mockResolvedValue(createPoolRecord({
       defaultDenyRead: ['/etc/passwd', '/proc/mounts'],
     }));
 
@@ -147,39 +163,35 @@ describe('sandbox-runtime admin service', () => {
     ]);
 
     await updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       payload: {
         defaultDenyRead: ['/etc/passwd', '/etc/mtab', '/proc/mounts'],
       },
       repositories,
     });
 
-    expect(userSandboxRuntimePools.updateByOwnerUserId).toHaveBeenCalledWith('user_1', {
+    expect(botSandboxRuntimePools.updateByBotInstanceId).toHaveBeenCalledWith('bot_1', {
       defaultDenyRead: ['/etc/passwd', '/proc/mounts'],
     });
   });
 
-  it('maps repository validation failures to stable SRT admin error codes', async () => {
-    userSandboxRuntimePools.updateByOwnerUserId.mockRejectedValue(
-      new Error('SRT pool proxy port range overlaps another pool.'),
-    );
-
+  it('rejects port allocation updates from the browser API', async () => {
     await expect(updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       payload: {
-        portRangeEnd: 9_199,
-        portRangeStart: 9_100,
+        port: 31_001,
       },
       repositories,
     })).rejects.toMatchObject({
-      code: 'SRT_POOL_PORT_RANGE_CONFLICT',
-      status: 409,
+      code: 'SRT_POOL_INVALID_CONFIG',
+      status: 400,
     });
+    expect(botSandboxRuntimePools.updateByBotInstanceId).not.toHaveBeenCalled();
   });
 
   it('rejects updates that try to change workspaceBasePath directly', async () => {
     await expect(updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       payload: {
         workspaceBasePath: '/tmp/other-user',
       },
@@ -189,12 +201,12 @@ describe('sandbox-runtime admin service', () => {
       status: 400,
     });
 
-    expect(userSandboxRuntimePools.updateByOwnerUserId).not.toHaveBeenCalled();
+    expect(botSandboxRuntimePools.updateByBotInstanceId).not.toHaveBeenCalled();
   });
 
   it('rejects updates when minReadyProcesses exceeds poolSize', async () => {
     await expect(updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       payload: {
         minReadyProcesses: 4,
         poolSize: 3,
@@ -205,61 +217,28 @@ describe('sandbox-runtime admin service', () => {
       status: 400,
     });
 
-    expect(userSandboxRuntimePools.updateByOwnerUserId).not.toHaveBeenCalled();
-  });
-
-  it('rejects updates when portRangeStart is greater than portRangeEnd', async () => {
-    await expect(updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
-      payload: {
-        portRangeEnd: 9_100,
-        portRangeStart: 9_199,
-      },
-      repositories,
-    })).rejects.toMatchObject({
-      code: 'SRT_POOL_INVALID_CONFIG',
-      status: 400,
-    });
-
-    expect(userSandboxRuntimePools.updateByOwnerUserId).not.toHaveBeenCalled();
-  });
-
-  it('maps child port collisions to stable SRT admin error codes', async () => {
-    userSandboxRuntimePools.updateByOwnerUserId.mockRejectedValue(
-      new Error('SRT pool port is already used by another pool.'),
-    );
-
-    await expect(updateAdminSandboxRuntimePool({
-      ownerUserId: 'user_1',
-      payload: {
-        port: 31_001,
-      },
-      repositories,
-    })).rejects.toMatchObject({
-      code: 'SRT_POOL_PORT_CONFLICT',
-      status: 409,
-    });
+    expect(botSandboxRuntimePools.updateByBotInstanceId).not.toHaveBeenCalled();
   });
 
   it('requests a pool restart through the repository', async () => {
-    userSandboxRuntimePools.requestRestart.mockResolvedValue(createPoolRecord({
+    botSandboxRuntimePools.requestRestart.mockResolvedValue(createPoolRecord({
       restartRequestedAt: new Date('2026-05-02T03:00:00.000Z'),
     }));
 
     const result = await requestAdminSandboxRuntimePoolRestart({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       repositories,
     });
 
-    expect(userSandboxRuntimePools.requestRestart).toHaveBeenCalledWith('user_1', expect.any(Date));
+    expect(botSandboxRuntimePools.requestRestart).toHaveBeenCalledWith('bot_1', expect.any(Date));
     expect(result.restartRequestedAt).toBe('2026-05-02T03:00:00.000Z');
   });
 
   it('returns not found when a restart targets an unknown pool', async () => {
-    userSandboxRuntimePools.requestRestart.mockResolvedValue(null);
+    botSandboxRuntimePools.requestRestart.mockResolvedValue(null);
 
     await expect(requestAdminSandboxRuntimePoolRestart({
-      ownerUserId: 'missing_user',
+      botInstanceId: 'missing_bot',
       repositories,
     })).rejects.toEqual(new ApiError({
       code: 'SRT_POOL_NOT_FOUND',
@@ -269,16 +248,17 @@ describe('sandbox-runtime admin service', () => {
   });
 });
 
-function createPoolRecord(overrides: Partial<UserSandboxRuntimePoolRecord> = {}): UserSandboxRuntimePoolRecord {
+function createPoolRecord(overrides: Partial<BotSandboxRuntimePoolRecord> = {}): BotSandboxRuntimePoolRecord {
   return {
     ...createBasePoolRecord(),
     ...overrides,
   };
 }
 
-function createBasePoolRecord(): UserSandboxRuntimePoolRecord {
+function createBasePoolRecord(): BotSandboxRuntimePoolRecord {
   return {
     apiKey: 'secret',
+    botInstanceId: 'bot_1',
     createdAt: new Date('2026-05-02T01:00:00.000Z'),
     defaultAllowRead: [],
     defaultAllowWrite: ['/tmp'],
@@ -290,7 +270,6 @@ function createBasePoolRecord(): UserSandboxRuntimePoolRecord {
     id: 'pool_1',
     maxConcurrentInit: 1,
     minReadyProcesses: 1,
-    ownerUserId: 'user_1',
     poolSize: 3,
     port: 31_000,
     portRangeEnd: 9_199,
@@ -298,6 +277,6 @@ function createBasePoolRecord(): UserSandboxRuntimePoolRecord {
     restartRequestedAt: null,
     sessionTimeoutMs: 600_000,
     updatedAt: new Date('2026-05-02T01:10:00.000Z'),
-    workspaceBasePath: '/app/apps/sandbox-runtime/user-workspaces/user_1',
+    workspaceBasePath: '/app/apps/sandbox-runtime/user-workspaces/bot_1',
   };
 }

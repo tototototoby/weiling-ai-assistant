@@ -16,7 +16,11 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <AdminShell email={session.user.email}>
+    <AdminShell
+      avatarUrl={session.user.image || '/brand/weiling-mark.png'}
+      email={session.user.email}
+      userName={session.user.name}
+    >
       {children}
     </AdminShell>
   );

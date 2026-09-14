@@ -103,6 +103,25 @@ it('submits only the bot name and keeps runtime config browser-owned fields out 
   });
 });
 
+it('can keep the post-create redirect inside the admin console', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ data: { id: 'bot_admin' }, error: null }),
+  }));
+
+  renderWithLocale(
+    <CreateBotForm profiles={profiles} quota={quota} successPathPrefix="/admin/bots" />,
+    { locale: 'en' },
+  );
+
+  await userEvent.type(screen.getByLabelText('Bot Name'), 'Admin Bot');
+  await userEvent.click(screen.getByRole('button', { name: 'Create Bot' }));
+
+  await waitFor(() => {
+    expect(pushMock).toHaveBeenCalledWith('/admin/bots/bot_admin');
+  });
+});
+
 it('shows the API error message when creation fails', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
@@ -136,8 +155,16 @@ it('blocks submission when the bot limit has been reached', () => {
 });
 
 it('blocks submission when no llm profiles exist yet', () => {
-  renderWithLocale(<CreateBotForm profiles={[]} quota={quota} />, { locale: 'en' });
+  renderWithLocale(
+    <CreateBotForm
+      profileManagementPath="/admin/llm-profiles"
+      profiles={[]}
+      quota={quota}
+    />,
+    { locale: 'en' },
+  );
 
   expect(screen.getByRole('button', { name: 'Create Bot' })).toBeDisabled();
   expect(screen.getByRole('alert')).toHaveTextContent('Create a profile in Settings first.');
+  expect(screen.getByRole('link', { name: 'Open Settings' })).toHaveAttribute('href', '/admin/llm-profiles');
 });

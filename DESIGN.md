@@ -1,13 +1,13 @@
 # DESIGN.md
 
-# WeClaws Design Guidelines
+# weiling Design Guidelines
 
-WeClaws 的设计方向是：
+weiling 的设计方向是：
 
 > Warm Executive Dashboard  
 > 温暖、克制、精致、有呼吸感的 AI Bot 管理控制台。
 
-本文档用于约束 WeClaws Web 控制台的视觉风格、主题系统、组件规范和页面落地标准。
+本文档用于约束 weiling Web 控制台的视觉风格、主题系统、组件规范和页面落地标准。
 
 ---
 
@@ -51,7 +51,7 @@ WeClaws 的设计方向是：
 
 ## 2. Theme System
 
-WeClaws 支持 Light / Dark 明暗主题。
+weiling 支持 Light / Dark 明暗主题。
 
 主题通过 `data-theme` 控制：
 
@@ -467,7 +467,7 @@ Badge 应小、圆、柔和，不要使用高饱和色块。
 
 ## 8. Overview Page
 
-概览页是 WeClaws 的视觉门面。
+概览页是 weiling 的视觉门面。
 
 推荐结构：
 
@@ -696,7 +696,7 @@ export function applyTheme(theme: ThemeMode) {
 
 ## 15. Final Standard
 
-一个页面是否符合 WeClaws 设计系统，用以下标准判断：
+一个页面是否符合 weiling 设计系统，用以下标准判断：
 
 1. 第一眼是否温暖、精致、可信赖？
 2. 是否不像默认后台模板？
@@ -707,4 +707,4 @@ export function applyTheme(theme: ThemeMode) {
 7. 页面是否有足够呼吸感？
 8. 长时间使用是否不疲劳？
 
-WeClaws 的设计不是为了炫技，而是为了让 AI Bot 管理变得稳定、清晰、可信、优雅。
+weiling 的设计不是为了炫技，而是为了让 AI Bot 管理变得稳定、清晰、可信、优雅。

@@ -158,7 +158,7 @@ Use the bundled shell script when the user wants a PNG output:
 
 Supported ratios and render sizes live in [references/ratios.md](references/ratios.md).
 
-In WeClaws, the rendering helper is remote-only. It posts the HTML content to Browserless' screenshot API and requires:
+In weiling, the rendering helper is remote-only. It posts the HTML content to Browserless' screenshot API and requires:
 - `BROWSERLESS_API_URL`
 - `BROWSERLESS_API_KEY`
 - `curl`

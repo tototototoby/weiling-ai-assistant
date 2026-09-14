@@ -1,0 +1,7 @@
+interface:
+  display_name: "微Link 微灵助手"
+  short_description: "跨端共享上下文、会跟进也懂生活的个人 AI 助手"
+  default_prompt: "使用 $weiling-assistant，在严格的用户隔离和确认边界内，帮助当前用户推进工作与生活事项。"
+
+policy:
+  allow_implicit_invocation: true

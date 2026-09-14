@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## Unreleased
+
+### Changed
+
+- Sandbox runtime config/status contracts advanced to version 2 for Bot-scoped pool identity, and the default pool size is now one worker per Bot.
+- The presentation `ppt-skill` is no longer bundled or default-synced; install it separately only after its distribution license has been reviewed.
+- Managed-Skill lock acquisition now reads process start times on both Windows and POSIX hosts, so local tests and Windows development do not fail solely because `ps` is unavailable.
+
+## 2026-07-21
+
+### Added
+
+- Added explicit managed-Skill filtering through `enabledSkillNames` and a server-side metadata reader for supervisor drift detection.
+
+### Changed
+
+- Filtered managed-Skill synchronization now installs only enabled manifest entries and removes disabled WeClaws-owned entries while preserving user-owned Skill directories.
+
 ## 2026-05-18
 
 ### Added

@@ -58,6 +58,7 @@ it('shows the admin console entry only for admins', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /open account menu/i }));
 
+  expect(await screen.findByRole('menuitem', { name: /settings/i })).toHaveAttribute('href', '/admin/llm-profiles');
   expect(await screen.findByRole('menuitem', { name: /admin console/i })).toHaveAttribute('href', '/admin/sandbox-runtime');
 });
 

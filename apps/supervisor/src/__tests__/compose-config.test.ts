@@ -3,6 +3,19 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 describe('docker compose supervisor env wiring', () => {
+  it('uses reachable diversified TCP resolvers for both networked runtimes', async () => {
+    const overlayPath = fileURLToPath(
+      new URL('../../../../infra/compose/docker-compose.network.yml', import.meta.url),
+    );
+    const overlay = await readFile(overlayPath, 'utf8');
+
+    expect(overlay.match(/- 223\.5\.5\.5/g)).toHaveLength(2);
+    expect(overlay.match(/- 119\.29\.29\.29/g)).toHaveLength(2);
+    expect(overlay.match(/- 1\.1\.1\.1/g)).toHaveLength(2);
+    expect(overlay.match(/- use-vc/g)).toHaveLength(2);
+    expect(overlay).not.toContain('192.0.2.1');
+  });
+
   it('passes FASTAGENT_SANDBOX_MODE through to the supervisor container', async () => {
     const composePath = fileURLToPath(
       new URL('../../../../infra/compose/docker-compose.yml', import.meta.url),
@@ -73,48 +86,41 @@ describe('docker compose supervisor env wiring', () => {
     const dockerfilePath = fileURLToPath(
       new URL('../../../../infra/docker/sandbox-runtime.Dockerfile', import.meta.url),
     );
-    const cnbConfigPath = fileURLToPath(
-      new URL('../../../../.cnb.yml', import.meta.url),
+    const composePath = fileURLToPath(
+      new URL('../../../../infra/compose/docker-compose.yml', import.meta.url),
     );
 
-    const [dockerfile, cnbConfig] = await Promise.all([
+    const [dockerfile, composeFile] = await Promise.all([
       readFile(dockerfilePath, 'utf8'),
-      readFile(cnbConfigPath, 'utf8'),
+      readFile(composePath, 'utf8'),
     ]);
     const dockerfileVersion = dockerfile.match(/^ARG AGENT_BROWSER_NPM_VERSION=(?<version>\S+)$/m)
       ?.groups?.version;
-    const cnbPinnedVersions = Array.from(
-      cnbConfig.matchAll(/AGENT_BROWSER_NPM_VERSION:\s*"(?<version>[^"]+)"/g),
-      (match) => match.groups?.version,
-    );
 
     expect(dockerfileVersion).toBe('0.27.0');
-    expect(cnbPinnedVersions).toEqual([dockerfileVersion, dockerfileVersion]);
-    expect(cnbConfig).toContain('--build-arg AGENT_BROWSER_NPM_VERSION="${AGENT_BROWSER_NPM_VERSION}"');
+    expect(composeFile).toContain(
+      `AGENT_BROWSER_NPM_VERSION: \${AGENT_BROWSER_NPM_VERSION:-${dockerfileVersion}}`,
+    );
   });
 
   it('keeps remote sandbox-runtime image builds aligned with the Dockerfile lark-cli default', async () => {
     const dockerfilePath = fileURLToPath(
       new URL('../../../../infra/docker/sandbox-runtime.Dockerfile', import.meta.url),
     );
-    const cnbConfigPath = fileURLToPath(
-      new URL('../../../../.cnb.yml', import.meta.url),
+    const composePath = fileURLToPath(
+      new URL('../../../../infra/compose/docker-compose.yml', import.meta.url),
     );
 
-    const [dockerfile, cnbConfig] = await Promise.all([
+    const [dockerfile, composeFile] = await Promise.all([
       readFile(dockerfilePath, 'utf8'),
-      readFile(cnbConfigPath, 'utf8'),
+      readFile(composePath, 'utf8'),
     ]);
     const dockerfileVersion = dockerfile.match(/^ARG LARK_CLI_NPM_VERSION=(?<version>\S+)$/m)
       ?.groups?.version;
-    const cnbPinnedVersions = Array.from(
-      cnbConfig.matchAll(/LARK_CLI_NPM_VERSION:\s*"(?<version>[^"]+)"/g),
-      (match) => match.groups?.version,
-    );
 
     expect(dockerfileVersion).toBe('1.0.32');
-    expect(cnbPinnedVersions).toEqual([dockerfileVersion, dockerfileVersion]);
-    expect(cnbConfig).toContain('--build-arg LARK_CLI_NPM_VERSION="${LARK_CLI_NPM_VERSION}"');
+    expect(composeFile.match(/LARK_CLI_NPM_VERSION: \${LARK_CLI_NPM_VERSION:-1\.0\.32}/g))
+      .toHaveLength(2);
   });
 
   it('pins bun and uv versions through the sandbox compose build surface', async () => {
@@ -165,12 +171,12 @@ describe('docker compose supervisor env wiring', () => {
     );
     const envExample = await readFile(envExamplePath, 'utf8');
 
-    expect(envExample).toContain('# COMPOSE_PROJECT_NAME=weclaws');
-    expect(envExample).toContain('# WECLAWS_DATA_ROOT=/srv/weclaws/data');
+    expect(envExample).toContain('# COMPOSE_PROJECT_NAME=weiling-ai-assistant');
+    expect(envExample).toContain('# WEILING_DATA_ROOT=/srv/weiling/data');
     expect(envExample).toContain('# WEB_ADMIN_EMAILS=admin@example.com');
     expect(envExample).toContain('# WEB_USER_BOT_LIMIT=0');
     expect(envExample).toContain('# SANDBOX_RUNTIME_NPM_VERSION=');
-    expect(envExample).toContain('# SRT_DEFAULT_POOL_SIZE=3');
+    expect(envExample).toContain('# SRT_DEFAULT_POOL_SIZE=1');
     expect(envExample).toContain('# SRT_DEFAULT_MIN_READY_PROCESSES=1');
     expect(envExample).toContain('# SRT_PORT_BASE=31000');
     expect(envExample).toContain('# SRT_PROXY_PORT_BASE=9100');
@@ -196,14 +202,14 @@ describe('docker compose supervisor env wiring', () => {
       readFile(envExamplePath, 'utf8'),
     ]);
 
-    expect(composeFile).toContain('SRT_DEFAULT_POOL_SIZE: ${SRT_DEFAULT_POOL_SIZE:-3}');
+    expect(composeFile).toContain('SRT_DEFAULT_POOL_SIZE: ${SRT_DEFAULT_POOL_SIZE:-1}');
     expect(composeFile).toContain('SRT_DEFAULT_MIN_READY_PROCESSES: ${SRT_DEFAULT_MIN_READY_PROCESSES:-1}');
     expect(composeFile).toContain(
       'SRT_DEFAULT_SESSION_TIMEOUT_MS: ${SRT_DEFAULT_SESSION_TIMEOUT_MS:-600000}',
     );
     expect(composeFile).toContain('SRT_PORT_BASE: ${SRT_PORT_BASE:-31000}');
     expect(composeFile).toContain('SRT_PROXY_PORT_BASE: ${SRT_PROXY_PORT_BASE:-9100}');
-    expect(envExample).toContain('SRT_DEFAULT_POOL_SIZE=3');
+    expect(envExample).toContain('SRT_DEFAULT_POOL_SIZE=1');
     expect(envExample).toContain('SRT_DEFAULT_SESSION_TIMEOUT_MS=600000');
   });
 
@@ -228,7 +234,7 @@ describe('docker compose supervisor env wiring', () => {
     expect(envExample).not.toContain('SANDBOX_DEFAULT_ALLOWED_DOMAINS');
   });
 
-  it('runs the repo-local sandbox pool manager with private config and per-user workspaces', async () => {
+  it('runs the repo-local sandbox pool manager with private config and Bot-scoped workspaces', async () => {
     const composePath = fileURLToPath(
       new URL('../../../../infra/compose/docker-compose.yml', import.meta.url),
     );
@@ -251,9 +257,9 @@ describe('docker compose supervisor env wiring', () => {
       'SRT_POOL_STATUS_FILE: /app/storage/sandbox-runtime-private/srt-pool-status.json',
     );
     expect(composeFile).toContain('SRT_MANAGER_PORT: ${SANDBOX_RUNTIME_PORT:-8788}');
-    expect(composeFile).toContain('- claws_instances:/app/storage/instances');
-    expect(composeFile).toContain('- sandbox_user_workspaces:/app/apps/sandbox-runtime/user-workspaces');
-    expect(composeFile).toContain('- sandbox_runtime_private:/app/storage/sandbox-runtime-private');
+    expect(composeFile).toContain('- weiling_instances:/app/storage/instances');
+    expect(composeFile).toContain('- weiling_sandbox_user_workspaces:/app/apps/sandbox-runtime/user-workspaces');
+    expect(composeFile).toContain('- weiling_sandbox_runtime_private:/app/storage/sandbox-runtime-private');
     expect(dockerfile).toContain('COPY infra/sandbox-runtime /app/infra/sandbox-runtime');
     expect(dockerfile).toContain('CMD ["node", "/app/infra/sandbox-runtime/entry.mjs"]');
     await expect(access(externalOverridePath)).rejects.toMatchObject({
@@ -291,31 +297,38 @@ describe('docker compose supervisor env wiring', () => {
     ]);
 
     expect(prodComposeFile).toContain(
-      'image: ghcr.io/yokingma/weclaws/sandbox-runtime:latest',
+      'image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}',
     );
     expect(prodComposeFile).toContain(
-      'image: ghcr.io/browserless/chromium:latest',
+      'image: ghcr.io/browserless/chromium:v2.56.7@sha256:b1ba7b054af2891a8199f884d4bd249cf8c3bd2fa8a97b339077e40f92803ba8',
     );
+    expect(prodComposeFile).toContain('profiles:\n      - browserless');
     expect(prodComposeFile).toContain(
-      'image: ghcr.io/yokingma/weclaws/supervisor:latest',
+      'image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}',
     );
-    expect(prodComposeFile).toContain('image: ghcr.io/yokingma/weclaws/web:latest');
+    expect(prodComposeFile).toContain('image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}');
     expect(prodComposeFile).toContain('build: !reset null');
     expect(prodComposeFile).toContain('pull_policy: always');
-    expect(prodComposeFile).toContain('${WECLAWS_DATA_ROOT}/sqlite:/app/storage/sqlite');
+    expect(prodComposeFile).toContain('${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sqlite:/app/storage/sqlite');
     expect(prodComposeFile).toContain(
-      '${WECLAWS_DATA_ROOT}/instances:/app/storage/instances',
+      '${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/instances:/app/storage/instances',
     );
     expect(prodComposeFile).toContain(
-      '${WECLAWS_DATA_ROOT}/sandbox-user-workspaces:/app/apps/sandbox-runtime/user-workspaces',
+      '${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-user-workspaces:/app/apps/sandbox-runtime/user-workspaces',
     );
     expect(prodComposeFile).toContain(
-      '${WECLAWS_DATA_ROOT}/sandbox-runtime-private:/app/storage/sandbox-runtime-private',
+      '${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-runtime-private:/app/storage/sandbox-runtime-private',
     );
     expect(
       prodComposeFile.match(/sandbox-runtime-private:\/app\/storage\/sandbox-runtime-private/g),
     ).toHaveLength(3);
-    expect(envExample).toContain('WECLAWS_DATA_ROOT=');
+    expect(prodComposeFile).toContain(
+      '${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/secrets:/app/storage/secrets:ro',
+    );
+    expect(prodComposeFile).toContain(
+      '${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/secrets:/app/storage/secrets',
+    );
+    expect(envExample).toContain('WEILING_DATA_ROOT=');
   });
 
   it('preinstalls the expanded CLI baseline in the sandbox image', async () => {
@@ -383,12 +396,43 @@ describe('docker compose supervisor env wiring', () => {
 
     expect(composeFile).toContain('WEB_ADMIN_EMAILS: ${WEB_ADMIN_EMAILS:-}');
     expect(composeFile).toContain('SRT_POOL_STATUS_FILE: /app/storage/sandbox-runtime-private/srt-pool-status.json');
-    expect(composeFile).toContain('- sandbox_runtime_private:/app/storage/sandbox-runtime-private');
+    expect(composeFile).toContain('- weiling_sandbox_runtime_private:/app/storage/sandbox-runtime-private');
     expect(composeFile).not.toContain('FASTAGENT_DEFAULT_PROVIDER: ${FASTAGENT_DEFAULT_PROVIDER:-}');
     expect(composeFile).not.toContain('FASTAGENT_DEFAULT_MODEL: ${FASTAGENT_DEFAULT_MODEL:-}');
     expect(composeFile).not.toContain('FASTAGENT_API_KEY: ${FASTAGENT_API_KEY:-}');
     expect(composeFile).not.toContain('FASTAGENT_BASE_URL: ${FASTAGENT_BASE_URL:-}');
     expect(composeFile).not.toContain('FASTAGENT_API_TYPE: ${FASTAGENT_API_TYPE:-}');
+  });
+
+  it('shares the persistent SMTP secret with web as read-write and supervisor as read-only', async () => {
+    const composePath = fileURLToPath(
+      new URL('../../../../infra/compose/docker-compose.yml', import.meta.url),
+    );
+    const webDockerfilePath = fileURLToPath(
+      new URL('../../../../infra/docker/web.Dockerfile', import.meta.url),
+    );
+    const supervisorDockerfilePath = fileURLToPath(
+      new URL('../../../../infra/docker/supervisor.Dockerfile', import.meta.url),
+    );
+    const gitignorePath = fileURLToPath(new URL('../../../../.gitignore', import.meta.url));
+    const dockerignorePath = fileURLToPath(new URL('../../../../.dockerignore', import.meta.url));
+    const [composeFile, webDockerfile, supervisorDockerfile, gitignore, dockerignore] = await Promise.all([
+      readFile(composePath, 'utf8'),
+      readFile(webDockerfilePath, 'utf8'),
+      readFile(supervisorDockerfilePath, 'utf8'),
+      readFile(gitignorePath, 'utf8'),
+      readFile(dockerignorePath, 'utf8'),
+    ]);
+
+    expect(composeFile).toContain('- weiling_secrets:/app/storage/secrets:ro');
+    expect(composeFile).toContain('- weiling_secrets:/app/storage/secrets');
+    expect(composeFile.match(/weiling_secrets:\/app\/storage\/secrets/g)).toHaveLength(2);
+    expect(composeFile).toMatch(/volumes:\s+[\s\S]*weiling_secrets:/);
+    expect(webDockerfile).toContain('/app/storage/secrets');
+    expect(supervisorDockerfile).toContain('/app/storage/secrets');
+    expect(gitignore).toContain('storage/**');
+    expect(dockerignore).toContain('storage/**');
+    expect(dockerignore).toContain('!storage/instances/.gitkeep');
   });
 
   it('defines a browserless sidecar contract for remote browser automation', async () => {
@@ -409,7 +453,11 @@ describe('docker compose supervisor env wiring', () => {
     ]);
 
     expect(composeFile).toContain('browserless:');
-    expect(composeFile).toContain('image: ghcr.io/browserless/chromium');
+    expect(composeFile).toContain('profiles:\n      - browserless');
+    expect(composeFile).toContain(
+      'image: ghcr.io/browserless/chromium:v2.56.7@sha256:b1ba7b054af2891a8199f884d4bd249cf8c3bd2fa8a97b339077e40f92803ba8',
+    );
+    expect(composeFile).not.toContain('SANDBOX_RUNTIME_PORT:-8788}:');
     expect(composeFile).not.toContain('- "${BROWSERLESS_PORT:-3000}:3000"');
     expect(composeFile).toContain('TOKEN: ${BROWSERLESS_TOKEN}');
     expect(composeFile).toContain('CONCURRENT: ${BROWSERLESS_CONCURRENT:-2}');
@@ -420,8 +468,9 @@ describe('docker compose supervisor env wiring', () => {
     );
     expect(composeFile).toContain('BROWSERLESS_API_KEY: ${BROWSERLESS_TOKEN}');
     expect(prodComposeFile).toContain('browserless:');
-    expect(prodComposeFile).toContain('image: ghcr.io/browserless/chromium:latest');
-    expect(prodComposeFile).toContain('pull_policy: always');
+    expect(prodComposeFile).toContain('image: ghcr.io/browserless/chromium:v2.56.7@sha256:b1ba7b054af2891a8199f884d4bd249cf8c3bd2fa8a97b339077e40f92803ba8');
+    expect(prodComposeFile).toContain('pull_policy: missing');
+    expect(prodComposeFile).toContain('profiles:\n      - browserless');
     expect(envExample).toContain('BROWSERLESS_TOKEN=replace-me');
     expect(envExample).not.toContain('# BROWSERLESS_TOKEN=replace-me');
     expect(envExample).toContain('# BROWSERLESS_API_URL=http://browserless:3000');
@@ -434,13 +483,27 @@ describe('docker compose supervisor env wiring', () => {
     const dockerfilePath = fileURLToPath(
       new URL('../../../../infra/docker/supervisor.Dockerfile', import.meta.url),
     );
-    const dockerfile = await readFile(dockerfilePath, 'utf8');
+    const buildScriptPath = fileURLToPath(
+      new URL('../../scripts/build.mjs', import.meta.url),
+    );
+    const [dockerfile, buildScript] = await Promise.all([
+      readFile(dockerfilePath, 'utf8'),
+      readFile(buildScriptPath, 'utf8'),
+    ]);
 
     expect(dockerfile).toContain('COPY resources resources');
     expect(dockerfile).toContain('COPY --from=build /app/resources ./resources');
-    expect(dockerfile).toContain('RUN pnpm --filter @weclaws/supervisor build');
-    expect(dockerfile).toContain('CMD ["node", "apps/supervisor/dist/index.js"]');
+    expect(dockerfile).toContain('RUN pnpm --filter @weiling-ai/supervisor build');
+    expect(dockerfile).toContain('ARG LARK_CLI_NPM_VERSION=1.0.32');
+    expect(dockerfile).toContain('npm install --global "@larksuite/cli@${LARK_CLI_NPM_VERSION}"');
+    expect(dockerfile).not.toContain('COPY --from=ghcr.io/');
+    expect(dockerfile).toContain(
+      'CMD ["sh", "-c", "umask 077 && exec node apps/supervisor/dist/index.js"]',
+    );
     expect(dockerfile).not.toContain('exec", "tsx", "src/index.ts');
+    expect(buildScript).toContain(
+      "external: ['better-sqlite3', '@wecom/aibot-node-sdk', 'nodemailer']",
+    );
   });
 
   it('keeps the web runtime image capable of running managed-skills locks and version lookup', async () => {
@@ -466,23 +529,15 @@ describe('docker compose supervisor env wiring', () => {
     const lockfilePath = fileURLToPath(
       new URL('../../../../pnpm-lock.yaml', import.meta.url),
     );
-    const contractDocPath = fileURLToPath(
-      new URL('../../../../docs/manuals/fastagent-cli-contract.md', import.meta.url),
-    );
-    const versionMatrixPath = fileURLToPath(
-      new URL('../../../../docs/manuals/version-matrix.md', import.meta.url),
-    );
-    const runbookPath = fileURLToPath(
-      new URL('../../../../docs/manuals/docker-deployment-runbook.md', import.meta.url),
+    const thirdPartyNoticesPath = fileURLToPath(
+      new URL('../../../../THIRD_PARTY_NOTICES.md', import.meta.url),
     );
 
-    const [packageJson, lockfile, contractDoc, versionMatrix, runbook] =
+    const [packageJson, lockfile, thirdPartyNotices] =
       await Promise.all([
         readFile(packageJsonPath, 'utf8'),
         readFile(lockfilePath, 'utf8'),
-        readFile(contractDocPath, 'utf8'),
-        readFile(versionMatrixPath, 'utf8'),
-        readFile(runbookPath, 'utf8'),
+        readFile(thirdPartyNoticesPath, 'utf8'),
       ]);
 
     const fastagentCliVersion = (
@@ -494,9 +549,33 @@ describe('docker compose supervisor env wiring', () => {
     expect(fastagentCliVersion).toBeTruthy();
     expect(lockfile).toContain(`specifier: ${fastagentCliVersion}`);
     expect(lockfile).toContain(`@fastagent/cli@${fastagentCliVersion}`);
-    expect(contractDoc).toContain(`@fastagent/cli@${fastagentCliVersion}`);
-    expect(versionMatrix).toContain(`| \`@fastagent/cli\` | \`${fastagentCliVersion}\` |`);
-    expect(runbook).toContain(`repo-local \`@fastagent/cli@${fastagentCliVersion}\``);
+    expect(thirdPartyNotices).toContain(`@fastagent/cli@${fastagentCliVersion}`);
+  });
+
+  it('keeps the official WeCom SDK version aligned across package metadata and docs', async () => {
+    const packageJsonPath = fileURLToPath(
+      new URL('../../package.json', import.meta.url),
+    );
+    const lockfilePath = fileURLToPath(
+      new URL('../../../../pnpm-lock.yaml', import.meta.url),
+    );
+    const thirdPartyNoticesPath = fileURLToPath(
+      new URL('../../../../THIRD_PARTY_NOTICES.md', import.meta.url),
+    );
+
+    const [packageJson, lockfile, thirdPartyNotices] = await Promise.all([
+      readFile(packageJsonPath, 'utf8'),
+      readFile(lockfilePath, 'utf8'),
+      readFile(thirdPartyNoticesPath, 'utf8'),
+    ]);
+    const sdkVersion = (
+      JSON.parse(packageJson) as { dependencies?: Record<string, string> }
+    ).dependencies?.['@wecom/aibot-node-sdk'];
+
+    expect(sdkVersion).toBeTruthy();
+    expect(lockfile).toContain(`specifier: ${sdkVersion}`);
+    expect(lockfile).toContain(`@wecom/aibot-node-sdk@${sdkVersion}`);
+    expect(thirdPartyNotices).toContain(`@wecom/aibot-node-sdk@${sdkVersion}`);
   });
 
   it('preinstalls managed-skill runtime tools in the supervisor image', async () => {
@@ -505,6 +584,8 @@ describe('docker compose supervisor env wiring', () => {
     );
     const dockerfile = await readFile(dockerfilePath, 'utf8');
 
-    expect(dockerfile).toContain('apt-get install -y --no-install-recommends curl gh ffmpeg procps');
+    expect(dockerfile).toContain(
+      'apt-get install -y --no-install-recommends ca-certificates curl gh ffmpeg procps',
+    );
   });
 });
