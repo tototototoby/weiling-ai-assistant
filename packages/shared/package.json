@@ -9,7 +9,7 @@
     "./managed-skills": "./src/managed-skills/index.ts"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.6.2"
   },
   "scripts": {
     "build": "pnpm exec tsc -p tsconfig.json",
