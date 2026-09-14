@@ -9,8 +9,8 @@
     "@weiling-ai/db": "workspace:*",
     "@weiling-ai/shared": "workspace:*",
     "@wecom/aibot-node-sdk": "1.0.7",
-    "better-sqlite3": "^12.10.0",
-    "nodemailer": "9.1.1"
+    "better-sqlite3": "^13.0.3",
+    "nodemailer": "10.0.3"
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
