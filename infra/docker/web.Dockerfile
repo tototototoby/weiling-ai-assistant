@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=${PNPM_HOME}:${PATH}
@@ -30,7 +30,7 @@ COPY resources resources
 
 RUN pnpm --filter @weiling-ai/web build
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 
 WORKDIR /app
 

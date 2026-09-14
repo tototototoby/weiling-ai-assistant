@@ -4,7 +4,7 @@ ARG LARK_CLI_NPM_VERSION=1.0.32
 ARG PNPM_VERSION=9.15.4
 ARG UV_VERSION=0.11.7
 
-FROM node:20-bookworm
+FROM node:26-bookworm
 
 ENV NODE_ENV=production
 ENV PATH="/usr/local/bin:${PATH}"
