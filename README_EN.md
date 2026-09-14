@@ -78,4 +78,8 @@ docs/              getting-started, deployment, security, and operations guides
 
 ## Contributing and license
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before opening a PR. Application code is MIT-licensed; upstream and third-party components keep their own notices. See [UPSTREAM.md](UPSTREAM.md) for project lineage.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CLA.md](CLA.md), [SECURITY.md](SECURITY.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before opening a PR.
+
+Weiling uses dual licensing for code whose copyright is controlled by the project: the community option is [AGPL-3.0-only](LICENSE), while a [separate commercial license](LICENSE-COMMERCIAL.md) is available by written agreement. The previously published `v0.1.0-beta.1` remains available under the MIT terms shipped with that release; the dual-license policy begins with `v0.2.0-beta.1` and does not revoke existing MIT grants.
+
+MIT-licensed WeClaws code and all other upstream or third-party components keep their own licenses. A commercial Weiling license does not override those terms. See [NOTICE](NOTICE), [UPSTREAM.md](UPSTREAM.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

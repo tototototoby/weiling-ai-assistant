@@ -6,13 +6,13 @@ services:
     pull_policy: never
 
   sandbox-runtime:
-    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using release images}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using release images}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}
     pull_policy: never
 
   supervisor:
-    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using release images}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using release images}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}
     pull_policy: never
 
   web:
-    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using release images}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using release images}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}
     pull_policy: never

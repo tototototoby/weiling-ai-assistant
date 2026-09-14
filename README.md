@@ -2,7 +2,8 @@
   <img src="assets/brand/wordmark-horizontal.svg" alt="微Link · 微灵 AI 助手" width="360" />
   <p><strong>不用多学一个软件，在熟悉的聊天窗口里，把事情交给微Link。</strong></p>
   <p>
-    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-69b7e8.svg" /></a>
+    <a href="LICENSE"><img alt="Community license: AGPL-3.0-only" src="https://img.shields.io/badge/community-AGPL--3.0-69b7e8.svg" /></a>
+    <a href="LICENSE-COMMERCIAL.md"><img alt="Commercial license available" src="https://img.shields.io/badge/commercial-license%20available-f5aaa5.svg" /></a>
     <a href="https://nodejs.org/"><img alt="Node.js 20+" src="https://img.shields.io/badge/node-20%2B-8ac6a0.svg" /></a>
     <a href="https://www.docker.com/"><img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-7bb9e8.svg" /></a>
     <a href="README_EN.md"><img alt="English" src="https://img.shields.io/badge/README-English-9aa9bd.svg" /></a>
@@ -170,4 +171,8 @@ README 中的 Hero、架构图、流程图和产品截图都应来自 `assets/`�
 
 ## 许可证
 
-应用代码采用 [MIT License](LICENSE)。FastAgent、sandbox-runtime、Browserless、Lark CLI、企业微信 SDK、托管技能和基础镜像分别遵循各自许可，详见 [第三方许可说明](THIRD_PARTY_NOTICES.md)。
+微Link采用双许可证模式：除明确标记的上游和第三方内容外，项目方拥有版权的代码可按 [AGPL-3.0-only 社区许可证](LICENSE) 使用；无法或不希望遵守 AGPL 的使用者，可以申请[单独的商业许可证](LICENSE-COMMERCIAL.md)。商业许可证只有在签署书面协议后生效。
+
+已经发布的 `v0.1.0-beta.1` 继续按其发布时附带的 MIT License 有效；双许可证政策从 `v0.2.0-beta.1` 开始适用，既有 MIT 权利不追溯撤销。
+
+本项目包含 MIT 许可的 WeClaws 上游代码，并依赖 FastAgent、sandbox-runtime、Browserless、Lark CLI、企业微信 SDK 等独立许可组件。项目商业许可证不覆盖这些内容，详见 [NOTICE](NOTICE)、[上游说明](UPSTREAM.md)和[第三方许可说明](THIRD_PARTY_NOTICES.md)。外部贡献还需遵守 [CLA](CLA.md)。

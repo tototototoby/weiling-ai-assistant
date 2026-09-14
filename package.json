@@ -1,9 +1,9 @@
 {
   "name": "weiling-ai-assistant",
-  "version": "0.1.0-beta.1",
+  "version": "0.2.0-beta.1",
   "private": true,
   "description": "微Link · 微灵 AI 助手（Weiling AI Assistant）：自托管、多用户、跨端共享上下文的 AI 助理平台。",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tototototoby/weiling-ai-assistant.git"

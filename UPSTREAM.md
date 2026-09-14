@@ -19,7 +19,9 @@
 
 ## 许可证与致谢
 
-上游 WeClaws 采用 MIT License。本仓库继续以 MIT License 发布应用代码，并在 [LICENSE](LICENSE) 中保留上游版权与授权文本。FastAgent、sandbox-runtime、Browserless、Lark CLI、企业微信 SDK、托管 Skills 和基础镜像不因本项目改名而改变其各自许可证，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+上游 WeClaws 采用 MIT License，其完整许可副本继续保存在 [THIRD_PARTY_LICENSES/WeClaws-MIT.txt](THIRD_PARTY_LICENSES/WeClaws-MIT.txt)，版权和归属见 [NOTICE](NOTICE)。从 `v0.2.0-beta.1` 起，微Link项目方拥有版权的新增和修改代码采用 [AGPL-3.0-only 社区许可证](LICENSE)，并可由项目权利人另行提供商业许可证；该双许可证不重新许可 WeClaws、FastAgent、sandbox-runtime、Browserless、Lark CLI、企业微信 SDK、其他上游代码、托管 Skills 或基础镜像。
+
+此前发布的 `v0.1.0-beta.1` 仍按其发布时附带的 MIT License 有效，既有授权不可追溯撤销。各第三方组件的具体边界见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 独立项目声明
 

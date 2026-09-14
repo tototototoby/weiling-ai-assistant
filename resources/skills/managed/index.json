@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-beta.1",
+  "version": "0.2.0-beta.1",
   "skills": [
     {
       "name": "agent-browser",
@@ -86,9 +86,10 @@
       "path": "personal-planner",
       "defaultSync": true,
       "emoji": "🧭",
+      "license": "MIT",
       "source": {
-        "kind": "weiling-curated",
-        "repo": "weiling",
+        "kind": "upstream-vendored",
+        "repo": "yokingma/weclaws",
         "path": "resources/skills/managed/personal-planner"
       }
     },
@@ -131,10 +132,11 @@
           "python3"
         ]
       },
+      "license": "MIT",
       "source": {
-        "kind": "weiling-curated",
-        "repo": "weiling",
-        "path": "resources/skills/managed/weather"
+        "kind": "upstream-curated",
+        "repo": "steipete/clawdis",
+        "path": "skills/weather"
       }
     },
     {
@@ -148,9 +150,10 @@
           "python3"
         ]
       },
+      "license": "MIT",
       "source": {
-        "kind": "weiling-curated",
-        "repo": "weiling",
+        "kind": "upstream-vendored",
+        "repo": "yokingma/weclaws",
         "path": "resources/skills/managed/editorial-card-screenshot"
       }
     },
@@ -543,7 +546,7 @@
       "path": "weiling-assistant",
       "defaultSync": true,
       "emoji": "🤖",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -555,7 +558,7 @@
       "path": "enterprise-mail",
       "defaultSync": true,
       "emoji": "✉️",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -567,7 +570,7 @@
       "path": "html-report",
       "defaultSync": true,
       "emoji": "📄",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -579,7 +582,7 @@
       "path": "morning-briefing",
       "defaultSync": true,
       "emoji": "☀️",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -591,7 +594,7 @@
       "path": "qwen-vision",
       "defaultSync": true,
       "emoji": "👁️",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -603,7 +606,7 @@
       "path": "office-files",
       "defaultSync": true,
       "emoji": "📎",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -615,7 +618,7 @@
       "path": "knowledge-query",
       "defaultSync": true,
       "emoji": "🔎",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -627,7 +630,7 @@
       "path": "broadcast-notice",
       "defaultSync": true,
       "emoji": "📣",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -639,7 +642,7 @@
       "path": "group-task",
       "defaultSync": true,
       "emoji": "✅",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -651,7 +654,7 @@
       "path": "poster-design",
       "defaultSync": true,
       "emoji": "🎨",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
@@ -663,7 +666,7 @@
       "path": "feishu-setup",
       "defaultSync": true,
       "emoji": "🔗",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "source": {
         "kind": "weiling-curated",
         "repo": "weiling-ai-assistant",
