@@ -29,10 +29,11 @@
 
 `resources/skills/managed` 中的 Skill 可能包含脚本、参考文档、模板、图片或来自上游仓库的收编内容。每个 Skill 应保留原始 frontmatter、LICENSE/NOTICE 和来源地址；不确定可再分发的内容不得进入公开 Release。
 
-`index.json` 中 `source.kind=weiling-curated` 的 Skill 是本项目维护的通用代码，随根目录 MIT 许可证发布；`upstream-vendored` 和 `upstream-curated` 条目必须继续遵循其记录的上游许可证。来源条目需要同时记录路径，后续收编更新应补充 commit 或 tag。
+`index.json` 中 `source.kind=weiling-curated` 的 Skill 是本项目维护的通用代码，从 `v0.2.0-beta.1` 起随根目录 `AGPL-3.0-only` 社区许可证发布，并可在项目权利人实际拥有商业再许可权的范围内纳入单独商业许可证；`upstream-vendored` 和 `upstream-curated` 条目必须继续遵循其记录的上游许可证。来源条目需要同时记录路径，后续收编更新应补充 commit 或 tag。
 
 特别注意：
 
+- `personal-planner` 与 `editorial-card-screenshot` 来自 MIT 许可的 WeClaws 上游；`weather` 来自 MIT 许可的 `steipete/clawdis`。它们不纳入微Link项目方的 AGPL/商业双许可证。
 - `lark-*` Skills 依赖飞书/Lark CLI 和平台权限，不代表本项目获得飞书官方授权。
 - 首个开源版本不内置原 `ppt-skill`：本地内容无法与上游 MIT/AGPL 许可切换点准确对应，已从公开源码目录移出。部署者可在核对目标版本许可证后自行安装外部 PPT Skill。
 - `editorial-card-screenshot`、`qwen-vision`、浏览器相关 Skill 需要外部服务或模型密钥，密钥不会被打进仓库或镜像。

@@ -8,7 +8,7 @@ services:
 
   sandbox-runtime:
     build: !reset null
-    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}
     pull_policy: always
     volumes: !override
       - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sandbox-user-workspaces:/app/apps/sandbox-runtime/user-workspaces
@@ -17,7 +17,7 @@ services:
 
   supervisor:
     build: !reset null
-    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}
     pull_policy: always
     volumes: !override
       - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sqlite:/app/storage/sqlite
@@ -28,7 +28,7 @@ services:
 
   web:
     build: !reset null
-    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}
+    image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}
     pull_policy: always
     volumes: !override
       - ${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sqlite:/app/storage/sqlite

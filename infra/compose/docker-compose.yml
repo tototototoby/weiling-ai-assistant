@@ -128,6 +128,7 @@ services:
       DATABASE_URL: file:/app/storage/sqlite/db.sqlite
       APP_BASE_URL: ${APP_BASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      WEILING_SOURCE_CODE_URL: ${WEILING_SOURCE_CODE_URL:-https://github.com/totototoby/weiling-ai-assistant}
       WEB_ADMIN_EMAILS: ${WEB_ADMIN_EMAILS:-}
       WEB_USER_BOT_LIMIT: ${WEB_USER_BOT_LIMIT:-0}
       SUPERVISOR_INTERNAL_URL: ${SUPERVISOR_INTERNAL_URL:-http://supervisor:8790}

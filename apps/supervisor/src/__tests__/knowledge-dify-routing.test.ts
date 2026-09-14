@@ -41,6 +41,6 @@ describe('knowledge Dify routing contract', () => {
       version?: string;
     };
 
-    expect(manifest.version).toBe('0.1.0-beta.1');
+    expect(manifest.version).toBe('0.2.0-beta.1');
   });
 });

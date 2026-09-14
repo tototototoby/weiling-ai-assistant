@@ -297,16 +297,16 @@ describe('docker compose supervisor env wiring', () => {
     ]);
 
     expect(prodComposeFile).toContain(
-      'image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}',
+      'image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/sandbox-runtime:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}',
     );
     expect(prodComposeFile).toContain(
       'image: ghcr.io/browserless/chromium:v2.56.7@sha256:b1ba7b054af2891a8199f884d4bd249cf8c3bd2fa8a97b339077e40f92803ba8',
     );
     expect(prodComposeFile).toContain('profiles:\n      - browserless');
     expect(prodComposeFile).toContain(
-      'image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}',
+      'image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/supervisor:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}',
     );
-    expect(prodComposeFile).toContain('image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.1.0-beta.1}}');
+    expect(prodComposeFile).toContain('image: ${WEILING_IMAGE_REGISTRY:-${WECLAWS_IMAGE_REGISTRY:?Set WEILING_IMAGE_REGISTRY before using the published-image override}}/web:${WEILING_IMAGE_TAG:-${WECLAWS_IMAGE_TAG:-0.2.0-beta.1}}');
     expect(prodComposeFile).toContain('build: !reset null');
     expect(prodComposeFile).toContain('pull_policy: always');
     expect(prodComposeFile).toContain('${WEILING_DATA_ROOT:-${WECLAWS_DATA_ROOT:-/srv/weiling/data}}/sqlite:/app/storage/sqlite');

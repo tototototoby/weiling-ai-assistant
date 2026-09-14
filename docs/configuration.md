@@ -14,6 +14,7 @@
 | `DATABASE_URL` | 是 | SQLite URL，开发默认 `file:./storage/sqlite/db.sqlite`，Compose 容器默认位于 `/app/storage/sqlite/db.sqlite`。 |
 | `APP_BASE_URL` | 是 | 用户实际访问的完整 URL；反向代理后必须使用外部 HTTPS 地址。 |
 | `BETTER_AUTH_SECRET` | 是 | Better Auth 会话签名密钥；使用随机高熵字符串，不能使用 `replace-me`。 |
+| `WEILING_SOURCE_CODE_URL` | 是 | 所有 Web 页面展示的 AGPL 对应源代码入口。原版默认指向本仓库；修改并通过网络提供服务时，应改为能够取得该修改版完整对应源代码的地址。 |
 | `WEB_ADMIN_EMAILS` | 否 | 首个管理员自举和管理员白名单，多个邮箱用逗号分隔。 |
 | `WEB_USER_BOT_LIMIT` | 否 | 每用户 Bot 数量上限；为空或 `0` 表示不限制。 |
 | `WEB_PORT` | 否 | Compose 暴露的 Web 宿主机端口，默认 `3000`。 |
