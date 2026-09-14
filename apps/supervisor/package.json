@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
-    "esbuild": "0.28.1",
-    "tsx": "^4.20.5"
+    "esbuild": "0.28.2",
+    "tsx": "^4.23.13"
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",
