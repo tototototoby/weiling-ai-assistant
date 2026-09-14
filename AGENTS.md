@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file sets repository-wide rules for coding agents in WeClaws.
+This file sets repository-wide rules for coding agents in weiling.
 
 Read first: `README.md` and `docs/manuals/README.md`.
 
@@ -48,15 +48,15 @@ Common commands:
 - `pnpm lint`
 - `pnpm db:generate`
 - `pnpm db:migrate`
-- `pnpm --filter @weclaws/web test`
-- `pnpm --filter @weclaws/supervisor test`
-- `pnpm --filter @weclaws/db test`
-- `pnpm --filter @weclaws/shared typecheck`
+- `pnpm --filter @weiling-ai/web test`
+- `pnpm --filter @weiling-ai/supervisor test`
+- `pnpm --filter @weiling-ai/db test`
+- `pnpm --filter @weiling-ai/shared typecheck`
 
 Environment and deployment:
 - Node 20.18.1 is recommended.
 - Root `.env` is for local dev; `infra/compose/.env` is for Compose.
-- `FASTAGENT_SANDBOX_MODE` supports `remote` and `disabled`; remote uses owner-specific pool creds.
+- `FASTAGENT_SANDBOX_MODE` supports `remote` and `disabled`; remote uses Bot-specific pool credentials.
 - The default Compose path is the repo-local three-image topology.
 - Read the Docker runbook before Compose changes.
 

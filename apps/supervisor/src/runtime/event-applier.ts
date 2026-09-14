@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { BotEventRepository, BotInstanceRepository } from '@weclaws/db';
-import { normalizeTrustedQrCodeUrl, type FastAgentJsonlEvent } from '@weclaws/shared';
+import type { BotEventRepository, BotInstanceRepository } from '@weiling-ai/db';
+import { normalizeTrustedQrCodeUrl, type FastAgentJsonlEvent } from '@weiling-ai/shared';
 import { getProcessStartedAt } from './process-identity';
-import { calculateRestartPlan, type RestartPlan } from './restart-policy';
+import { calculateRestartPlan } from './restart-policy';
 
 const INVALID_QR_URL_ERROR_CODE = 'INVALID_QR_URL';
 const INVALID_QR_URL_ERROR_MESSAGE = 'Rejected untrusted QR code URL.';
@@ -10,7 +10,7 @@ const INVALID_QR_URL_ERROR_MESSAGE = 'Rejected untrusted QR code URL.';
 export interface ApplyFastAgentEventDependencies {
   botEvents: BotEventRepository;
   botInstances: BotInstanceRepository;
-  calculateRestartPlan?: (currentRestartCount: number, observedAt: Date) => RestartPlan;
+  calculateRestartPlan?: typeof calculateRestartPlan;
 }
 
 export interface ApplyFastAgentEventInput {
@@ -42,6 +42,11 @@ export async function applyFastAgentEvent(
         processPid: input.event.pid,
         processStartedAt: await resolveProcessStartedAt(input.event.pid, observedAt),
       });
+
+      // A new runtime invalidates the QR published by the previous process.
+      if (currentBot.lastQrCodeUrl || currentBot.qrCodeIssuedAt) {
+        await dependencies.botInstances.clearQrCode(input.botInstanceId, observedAt);
+      }
       break;
     case 'qr_code':
       const qrCodeUrl = getRequiredString(input.event.data, 'qrCodeUrl', input.event.message);
@@ -54,6 +59,10 @@ export async function applyFastAgentEvent(
           observedAt,
         });
         break;
+      }
+
+      if (shouldIgnoreRepeatedQrCode(currentBot, input.event)) {
+        return currentBot;
       }
 
       await dependencies.botInstances.recordQrCode(input.botInstanceId, {
@@ -100,6 +109,7 @@ export async function applyFastAgentEvent(
         currentBot.restartCount,
         currentBot.desiredState,
         currentBot.status,
+        currentBot.lastErrorMessage,
         observedAt,
         input.event.message,
       );
@@ -137,12 +147,35 @@ function shouldIgnoreStaleProcessEvent(
   return currentProcessPid !== event.pid;
 }
 
+function shouldIgnoreRepeatedQrCode(
+  currentBot: {
+    lastQrCodeUrl: string | null;
+    processPid: number | null;
+    qrCodeIssuedAt: Date | null;
+    qrReissueRequestedAt: Date | null;
+  },
+  event: FastAgentJsonlEvent,
+) {
+  if (currentBot.qrReissueRequestedAt) {
+    return false;
+  }
+
+  if (currentBot.processPid === null || event.pid !== currentBot.processPid) {
+    return false;
+  }
+
+  // Keep the first QR from this runtime stable until it expires; a fresh QR
+  // appears only after the administrator requests a reissue.
+  return Boolean(currentBot.lastQrCodeUrl && currentBot.qrCodeIssuedAt);
+}
+
 async function applyStoppedEvent(
   dependencies: ApplyFastAgentEventDependencies,
   botInstanceId: string,
   currentRestartCount: number,
   desiredState: 'running' | 'stopped',
   currentStatus: string,
+  lastErrorMessage: string | null,
   observedAt: Date,
   message: string,
 ) {
@@ -163,6 +196,9 @@ async function applyStoppedEvent(
   const restartPlan = (dependencies.calculateRestartPlan ?? calculateRestartPlan)(
     currentRestartCount,
     observedAt,
+    {
+      keepRetryingAfterThreshold: isTransientNetworkFailure(lastErrorMessage),
+    },
   );
 
   if (restartPlan.kind === 'failed') {
@@ -180,6 +216,15 @@ async function applyStoppedEvent(
     restartBackoffUntil: restartPlan.restartBackoffUntil,
     restartCount: restartPlan.restartCount,
   });
+}
+
+function isTransientNetworkFailure(errorMessage: string | null) {
+  if (!errorMessage) {
+    return false;
+  }
+
+  return /(?:fetch failed|eai_again|enotfound|econnreset|etimedout|network error|request timed out|timed out)/iu
+    .test(errorMessage);
 }
 
 function assertAgentIdMatches(botInstanceId: string, agentId: string | undefined) {

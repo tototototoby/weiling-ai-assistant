@@ -1,11 +1,58 @@
 # PATTERNS
 
+## Authentication Routing
+
+- `/` is the single post-authentication routing authority: signed-out visitors go to `/login`, administrators go to `/admin/bots`, and other authenticated users go to `/chat`.
+- Client sign-in and sign-up forms navigate to `/` after success. They must not duplicate administrator allowlist logic in browser code.
+- Authenticated visits to `/login` and `/register` use the same `isAdminEmail()` decision and redirect directly to the matching workspace.
+
+## Employee Chat
+
+- `/chat/login` is the employee-specific Better Auth email/password page; an already-authenticated visit redirects to `/chat`.
+- `/chat` loads `listBots(session.user.id)` server-side and therefore only exposes Bots owned by the current account.
+- `ChatConsole` keeps the dedicated page compact: left assistant list, right shared `WebChatPanel`, top actions for change password and sign out.
+- Password changes use the Better Auth client `changePassword`; the UI requires a current password and a new password of at least 8 characters.
+- Employee credential accounts and Bot ownership are production/DB facts, not an admin CRUD feature in this page. Adding a new employee account must also transfer the target Bot's owner so `/chat` visibility and `requireOwnedBot` match the employee.
+
+## Administrator Messages
+
+- `POST /api/admin/messages` only creates `admin_message_deliveries` rows; it never starts a process or calls a delivery channel directly.
+- The console polls the admin-message API every 2.5 seconds only while rows are `pending` or `delivering`, then stops after terminal states are returned.
+- `/api/admin/messages` GET returns the durable failed-message policy with delivery rows. PATCH only updates `global_admin_message_configs`; Web never resumes or dispatches queued messages itself.
+- When deferred delivery is enabled, exhausted deliveries are shown as `waiting_for_user` and are not polled continuously. Supervisor resumes them only after the matching Bot receives a new user message; disabling the policy lets Supervisor finalize waiting rows as failed.
+- Global message copy uses the browser-safe `src/lib/admin-message-copy.ts` contract in both the editor and service validation. Keep its keys, defaults, exact `{{variable}}` grammar, and character limits synchronized with the database contract through the Web contract test.
+- Delivery-policy toggles and message-copy saves always PATCH a complete configuration snapshot so one editor cannot overwrite the other with stale defaults. Restoring defaults changes only the browser draft until the administrator explicitly saves.
+
 ## Frontend Foundation
+
+- `/join/[token]` may override the shared `AuthShell` brand label and image while login and registration keep the default weiling lockup.
+- `/join/[token]` only collects a name or nickname. The server atomically reserves the single matching enabled employee, creates a Bot from the administrator-selected default LLM profile, enables its public QR share, and returns that share URL without creating a Better Auth user or session.
+- A completed public-QR claim records `claimedBotInstanceId`. A repeated submission with the same enabled invite and normalized name returns the existing Bot's share URL instead of creating a second Bot.
+- Employee onboarding Bots remain owned by the user who owns the selected default LLM profile. Deleting an employee-directory record does not implicitly delete that Bot; administrators must stop and delete the Bot separately.
+- Employee-directory deletion is an administrator maintenance action and may remove claimed or unclaimed records. A missing record returns `404 NOT_FOUND`.
+- Company-email derivation is limited to 2-8 character Chinese legal names. Latin aliases and uncertain names must remain empty for explicit administrator entry instead of producing guessed recipients.
+
+## Dify Administration
+
+- The Dify API key is accepted only by server-side admin routes and is represented in browser DTOs as `apiKeyConfigured`; leaving the editor blank preserves the stored key.
+- `/api/admin/dify/test` calls Dify's `/parameters` endpoint server-side and records a durable test result. The browser never receives Dify response bodies or credentials.
+- Dify settings are global control-plane intent. Web never writes Bot workspace files or starts processes; Supervisor projects the managed MCP entry and reconciles per-Bot revision state.
+- RAGFlow settings use the same control-plane boundary: `/admin/ragflow` and `/api/admin/ragflow` only persist global intent, test server-side API connectivity, and display durable per-Bot sync facts. API keys must never be returned to the browser.
+
+## WeCom Administration
+
+- `/admin/wecom` and `/api/admin/wecom` persist only global long-connection intent and show a Bot channel overview. Web never opens a WeCom connection; Supervisor exclusively owns the official WebSocket client.
+- The browser DTO exposes `secretConfigured` but never the WeCom Bot Secret. Leaving the Secret field blank preserves the stored value, and every material global configuration change increments the durable revision for Supervisor reconciliation.
+- Bot details own direct WeCom channel management through `/api/admin/bots/[id]/wecom`; employee-directory metadata is optional and never blocks binding. Personal Weixin and WeCom remain channels of the same Bot rather than separate Bot or sandbox records.
+- “Reconnect” only calls `GlobalWecomConfigRepository.requestReconnect()` to write a durable revision intent. Web must never instantiate the SDK or open a second WebSocket connection.
+- `/admin/wecom` lists durable `awaiting_name` onboarding sessions through `WecomOnboardingRepository`. Browser DTOs expose only a masked `wecomUserId` and a server-generated HMAC reset token; they never expose the raw pending identity.
+- `POST /api/admin/wecom/onboarding/reset` deletes only the selected pending/cooldown identity session. The browser submits the opaque HMAC token, and the server resolves it against current repository records before deletion.
 
 - Web UI 现在统一使用 Tailwind v4 + 复制到仓库内的 shadcn/Radix primitives，基础组件集中在 [`src/components/ui`](./src/components/ui)
 - [`src/lib/env.ts`](./src/lib/env.ts) 在开发态会优先使用当前进程已有环境变量；`getEnv()` 需要的 web env（当前包括 `DATABASE_URL` / `APP_BASE_URL` / `BETTER_AUTH_SECRET` / `WEB_ADMIN_EMAILS` / `WEB_USER_BOT_LIMIT`）或 SRT 默认池 env 只要有缺项，就要回退加载工作区根目录 `.env`，但不能覆盖已经显式注入的同名值
 - `resolveInstancesRoot()` 必须和 supervisor 共用 shared `resolveInstancesRootPath()` 语义；开发态需要先尝试从工作区根 `.env` 读取 `INSTANCES_ROOT`
 - `apps/web` 的测试入口必须继续通过根级 `vitest --root apps/web` 执行；不要重新依赖 `apps/web/node_modules/.bin/vitest` 这类会把 pnpm 虚拟仓库路径写死到 shim 的包级可执行文件
+- Vitest 的源码别名固定使用 `@ -> apps/web/src`；不要把 alias key 写成只匹配字面量的 `@/`，否则组件测试无法解析 `@/...` 导入
 - `apps/web/next-env.d.ts` 必须继续引用稳定的 `./.next/types/routes.d.ts`；不要提交本地 `next dev` 生成的 `./.next/dev/types/routes.d.ts` 漂移，否则 fresh checkout / CI 的 typecheck 和 build 会变成依赖开发态预热
 - 需要弹出式操作菜单时，优先复用 [`src/components/ui/dropdown-menu.tsx`](./src/components/ui/dropdown-menu.tsx) 的 Radix primitive，而不是在业务组件里直接拼 menu 行为
 - Claude 风格 refinement 继续沿用现有技术栈，不新增字体或兼容层；视觉统一通过全局 token、组件 class 重写和页面骨架重组完成
@@ -17,7 +64,7 @@
   - 管理台：[`src/app/admin/layout.tsx`](./src/app/admin/layout.tsx) + [`src/components/layout/admin-shell.tsx`](./src/components/layout/admin-shell.tsx)
 - [`src/components/layout/auth-shell.tsx`](./src/components/layout/auth-shell.tsx) 继续作为 `/login` 和 `/register` 的唯一共享外壳；桌面端左侧必须保留简洁的产品 hero，右侧表单卡片继续维持更平衡的宽度上限（当前为 `lg:max-w-[42rem]`），外层 grid 继续保持更开的画布（当前 `max-w-[110rem]`），左侧 hero 内容宽度也可以放到更宽的上限（当前 `max-w-[46rem]`），并进一步收紧桌面主 gap；当 hero 在小屏隐藏时，认证卡片必须回到 `w-full max-w-none` 占满单列可用宽度
 - 认证页左侧 hero 文案统一从 [`src/lib/messages.ts`](./src/lib/messages.ts) 读取，并明确覆盖三件事：一个账号可管理多个 AI 助手、当前交互渠道是微信、支持语音/图片/文件类自动化任务；不要在页面里散落硬编码版本
-- 认证页 hero 品牌锁定继续复用 [`src/components/layout/brand-lockup.tsx`](./src/components/layout/brand-lockup.tsx) 的 `hero` variant；当前视觉比例是更小的 logo + 更大的 `WeClaws` 字标，不要在 auth shell 里单独手写一套品牌块
+- 认证页 hero 品牌锁定继续复用 [`src/components/layout/brand-lockup.tsx`](./src/components/layout/brand-lockup.tsx) 的 `hero` variant；当前视觉比例是更小的 logo + 更大的 `weiling` 字标，不要在 auth shell 里单独手写一套品牌块
 - [`src/components/auth/sign-up-form.tsx`](./src/components/auth/sign-up-form.tsx) 的注册字段顺序固定为 `email -> password -> inviteCode`；只有 `email` 和 `password` 显示可见的必填标识，`inviteCode` 保持可选输入，且不要让这个视觉标识破坏原始字段可访问名称
 - 共享展示容器优先复用 [`src/components/layout/page-header.tsx`](./src/components/layout/page-header.tsx)、[`src/components/layout/section-card.tsx`](./src/components/layout/section-card.tsx) 和 [`src/components/layout/empty-state.tsx`](./src/components/layout/empty-state.tsx)，避免重新回到 inline-style 页面
 - 全局 token 现在区分 `app-bg / app-panel / surface / surface-elevated / surface-muted`，页面层级优先靠留白、字重和弱对比表面建立，而不是靠厚重边框
@@ -47,7 +94,7 @@
 - 注册表单必须显式保留 `inviteCode` 输入；它是正常邀请码注册的默认入口，不能退回“纯邮箱密码直注册”的 client-only 流程
 - Better Auth 原始 `/sign-up/email` 必须被 [`src/lib/auth-invite.ts`](./src/lib/auth-invite.ts) 的 hook 拦住；默认只有携带 live `inviteReservationToken` 且与 `reservedByEmail`/TTL 匹配的服务端调用才能放行，唯一例外是携带 live bootstrap claim token 且用户表仍为空的首个白名单管理员自举注册
 - [`src/app/api/auth/register-with-invite/route.ts`](./src/app/api/auth/register-with-invite/route.ts) 只允许在 Better Auth 建号前的失败路径调用 `releaseReservation()`；建号成功后的 finalize 异常不能把邀请码重新释放
-- 邀请码或首个管理员自举注册成功后，web 必须调用 `userSandboxRuntimePools.ensureForUser()` 为新用户创建默认 SRT pool；这一步失败只能记日志，不能回滚已创建账号或重新释放邀请码
+- 注册只创建用户认证状态，不再创建用户级 SRT pool；Bot 首次启动前由 Supervisor 通过 `BotSandboxRuntimePoolRepository.ensureForBot()` 建立独立 pool
 - bootstrap claim 统一走 `registrationBootstrapClaims.claim()/release()`；claim 必须在 SQLite `immediate` 事务里同时检查“当前无用户 + 旧 claim 不活跃”，避免并发下放宽成多个首批管理员
 - 服务端包装 Better Auth `signUpEmail()`/`signInEmail()` 这类响应时，必须逐条 append 所有 `Set-Cookie` header，不能用单个 `headers.get('set-cookie')` 压平
 - hook 只做 reservation 校验和清洗 body，不负责消费邀请码
@@ -117,22 +164,23 @@
   - [`src/components/bots/bot-list.tsx`](./src/components/bots/bot-list.tsx) 只负责结果渲染和 inline rename 交互，不再持有数据获取和筛选逻辑
 - 列表页重命名是当前唯一的 Bot 名称编辑入口：点击名称进入 input，名称按钮必须在 hover/focus 时提示可重命名，`Enter` 保存、`Escape` 取消；保存成功后由 `BotsConsole` 只更新本地目标 bot，不刷新整个列表；具体表单副作用收敛在 [`src/components/bots/bot-rename-control.tsx`](./src/components/bots/bot-rename-control.tsx)
 - 登录后全局工具区统一收敛到 [`src/components/layout/console-toolbar.tsx`](./src/components/layout/console-toolbar.tsx)，只承载移动端菜单入口、主题切换和语言切换；桌面品牌展示收口到左 rail，不再在顶部重复放 logo
-- 浏览器元数据、左 rail 与认证页都应显示 `WeClaws` 品牌；对内 package/import 名称统一使用 `weclaws` / `@weclaws/*`
+- 浏览器元数据、左 rail 与认证页都应显示 `weiling` 品牌；对内 package/import 名称统一使用 `weclaws` / `@weiling-ai/*`
 - 顶部工具条只承载全局工具和管理员入口，不再渲染账号邮箱；账号身份与会话动作统一放在 [`src/components/layout/account-menu.tsx`](./src/components/layout/account-menu.tsx)
 - 顶部工具条左侧现在允许展示只读环境信息；当前固定展示 `FastAgent CLI v...` 轻量 badge，版本号由服务端读取 `apps/supervisor/package.json` 里的 `@fastagent/cli` 依赖值，读取失败时静默隐藏
-- 左 rail 是登录后控制台唯一的桌面品牌区：[`src/components/layout/brand-lockup.tsx`](./src/components/layout/brand-lockup.tsx) 的 `rail` variant 必须使用更大、更重的 `WeClaws` 字标；不要再在 toolbar 里重复渲染品牌块
+- 左 rail 是登录后控制台唯一的桌面品牌区：[`src/components/layout/brand-lockup.tsx`](./src/components/layout/brand-lockup.tsx) 的 `rail` variant 必须使用更大、更重的 `weiling` 字标；不要再在 toolbar 里重复渲染品牌块
 - 顶部工具条里的深浅色切换和中英文切换必须保持同一视觉高度，toolbar 整体作为扁平 utility strip，而不是第二个品牌 header
 - 桌面端 `AppShell` 必须保留全局文档滚动条；左 rail 通过固定定位常驻视口，右侧主内容继续走正常页面流，不要再切成独立的局部滚动容器
 - 左 rail 的 `Bots` 导航激活态保持淡色选中，不要回到深色高亮；主 CTA 继续只保留 `Create Bot` 按钮承担强强调，按钮文案与图标保持左对齐
 - 桌面端账号卡固定在左 rail 最底部；移动端账号卡放进导航 sheet 最底部，账号信息不回到顶部工具条
-- `AccountMenu` 里只有 `Details` 继续保持禁用占位；`Settings` 必须跳转到真实的 `/settings` 页面，`Logout` 继续通过 Better Auth client `signOut` 成功后跳转 `/login`
+- `AccountMenu` 里只有 `Details` 继续保持禁用占位；管理员的 `Settings` 跳转到 `/admin/llm-profiles`，普通用户跳转到 `/settings`，`Logout` 继续通过 Better Auth client `signOut` 成功后跳转 `/login`
 - Claude 风格列表页保持“页头 + 概览带 + 筛选条 + 主列表”的层级；overview stats 是轻量 summary strip，不再做成与主内容同权重的重卡片
 - 第一版企业面板不提供独立 Overview 路由，也不渲染 `Overview / Sessions / Files / Knowledge / Members / Audit Logs` 这类未落地导航；`/bots` 承担首页级 Bot inventory 和轻量概览职责
 - runtime status filter 只按 `status` 字段工作；`desiredState` 在列表页仍然是展示信息，不参与筛选
 - 当列表里出现未知 runtime 值时，filter UI 可以暴露 `unknown` 选项，但 overview stats 仍只统计已知 bucket
 - create bot 页的 runtime 配置摘要来自当前选中的 LLM profile；浏览器提交必须显式携带 `name + llmProfileId`，`provider / model` 从 profile snapshot 写入 `bot_instances`
 - `/bots` 和 `/bots/new` 都要展示当前 owner 的 Bot 已用数量；如果 `WEB_USER_BOT_LIMIT` 生效，还要展示总上限与剩余额度，并在创建页命中上限时禁用提交按钮
-- `/settings` 页面和 `GET/POST /api/settings/llm-profiles`、`PATCH/DELETE /api/settings/llm-profiles/{profileId}` 是当前唯一的用户级 LLM profile 入口；profile 为 owner-scoped CRUD，API key 不回显明文，只返回 `hasApiKey`
+- `/settings` remains the non-administrator LLM profile page; administrators manage the same owner-scoped profiles and onboarding default at `/admin/llm-profiles` inside `AdminShell`, and administrator visits to `/settings` redirect there.
+- Both pages reuse `GET/POST /api/settings/llm-profiles` and `PATCH/DELETE /api/settings/llm-profiles/{profileId}`. These APIs remain owner-scoped, and API keys are never returned as plaintext; clients only receive `hasApiKey`.
 - 设置页里的 `API Type` 必须使用固定选项的 `Select`，当前只允许：
   - `anthropic-messages`
   - `openai-completions`
@@ -158,22 +206,50 @@
 - 管理台列表只展示邀请码状态与审计字段，不承担批量导出、筛选或复杂运营逻辑；审计展示必须优先显示创建人/使用账号邮箱，而不是内部 user id
 - 新邀请码创建统一调用 `POST /api/admin/invites`，由服务端生成 code；前端不能自己拼邀请码
 - 删除邀请码统一调用 `DELETE /api/admin/invites/{id}`；只有 `unused + unreserved` 的记录允许删除，`reserved/used` 必须返回 `409 INVITE_DELETE_NOT_ALLOWED`
+- 员工领取成功后的二维码跳转必须保留当前页面 origin，并且只接受服务端返回的 `/share/qr/` 路径、query 与 hash；不能直接导航到 `APP_BASE_URL` 生成的绝对地址，否则临时 tunnel 或反向代理访问会把外部员工带回内网域名
+
+## Admin Morning Briefings
+
+- `/admin/morning-briefings` 统一管理全部 Bot 的工作日晨报策略；页面数据和校验收敛在 [`src/lib/morning-briefing-admin.ts`](./src/lib/morning-briefing-admin.ts)，route 只做管理员鉴权和统一 API envelope。
+- Web 只写 SQLite 中的持久化策略意图，不直接写 Bot 工作区或管理 FastAgent 定时任务；Supervisor 负责策略投影、中央排期和主动消息投递。
+- 列表必须显式区分 `desiredRevision` 与 `appliedRevision`、员工退出与管理员强制覆盖、策略同步与中央投递结果。
+- 绿色“中央已排期”只来自有效 `centralScheduledFor`。`centralLastError` 必须显示为投递重试中，并进入需处理摘要和错误筛选。
+- 批量操作未选中 Bot 时作用于全员；选中后仅作用于选中 Bot。单 Bot 编辑只允许城市、`HH:mm` 发送时间、固定 `Asia/Shanghai` 时区和 `forceEnabled`。
+
+## Admin Bot Inventory
+
+- 管理员的跨用户 Bot 清单固定使用 `/admin/bots` 和 `/admin/bots/[id]`，必须留在独立 `AdminShell` 内；管理员侧 `Bots` 导航不能再跳普通用户的 `/bots`。
+- [`src/lib/admin-bots.ts`](./src/lib/admin-bots.ts) 负责把全量 Bot、Owner 邮箱和晨报策略收敛状态组合成管理 DTO；页面不得自行拼 repository 查询。
+- 管理员启停和重启走 `/api/admin/bots/[id]/command`，route 先做管理员鉴权，再复用 bot-service 写持久化运行意图；Web 不直接管理 FastAgent 进程。
+- Administrator Bot deletion uses `DELETE /api/admin/bots/[id]` and the same `deleteBot()` invariant as owner deletion: `desiredState=stopped`, `status=stopped`, and `processPid=null`. Success returns administrators to `/admin/bots`.
+- `Stop` 和 `Restart` 这类影响运行的管理员操作必须先确认；列表和详情应同时展示实际运行状态与期望状态，避免把 intent 当作已完成进程变更。
+
+## Admin Global Agent
+
+- `/admin/global-agent` is the single administrator surface for shared Agent documents, managed Skill policy, revision publishing, and per-Bot projection status. It must remain inside `AdminShell`.
+- The web process only writes revisioned SQLite intent. The Supervisor owns atomic projection of `AGENTS.md`, `SOUL.md`, and managed Skills into Bot workspaces.
+- Bundle resources seed the database only when no global configuration exists. After seeding, the database is authoritative and a deploy must not overwrite administrator edits.
+- Skill inventory and document reads must be constrained to validated entries in `resources/skills/managed/manifest.json`; never accept arbitrary names or filesystem paths from the browser.
+- Browser management exposes Skill source as read-only and allows enable/disable policy only. Credentials, per-user overrides, and `AGENTS.local.md` must never be returned by the admin APIs.
+- Publishing marks every Bot projection pending. The UI must show target and applied revisions and must not report success until the Supervisor records a successful projection.
+- `/admin/bots/[id]` also owns the Bot-specific Agent appendix editor. It stores append-only overrides, requires an audit reason, exposes revision history, and restores global defaults by writing an empty new revision rather than deleting history.
+- The Bot detail UI must distinguish saved intent from applied projection by comparing both global and Bot override revisions; it must never report a newly saved preset as effective before Supervisor convergence.
 
 ## Admin Sandbox Runtime
 
 - `/api/admin/sandbox-runtime/pools` 是 sandbox-runtime 管理台的数据入口；route 只做管理员鉴权和 API envelope，配置/status 合并逻辑收敛在 [`src/lib/sandbox-runtime-admin.ts`](./src/lib/sandbox-runtime-admin.ts)
 - `/admin/sandbox-runtime` 是管理台默认入口，`/admin` 必须重定向到这里；邀请码管理继续放在 `/admin/invites`
 - admin 子树必须使用独立 [`src/components/layout/admin-shell.tsx`](./src/components/layout/admin-shell.tsx)，不要再复用用户 Bot 工作台的 `AppShell`
-- [`src/components/admin/admin-sandbox-runtime-console.tsx`](./src/components/admin/admin-sandbox-runtime-console.tsx) 负责 manager resource summary、紧凑的 per-user pool 列表，以及单 pool 的模态框编辑；服务端 page 只做初始数据读取
-- sandbox-runtime 管理 API 只能返回 `apiKeyConfigured`，不能把 `user_sandbox_runtime_pools.api_key` 明文或局部掩码返回给浏览器
-- sandbox-runtime 管理 API 在读写 `defaultDenyRead` 时必须净化 `/etc/mtab`；Linux remote sandbox 的 mount 信息降敏统一依赖标准化 `${WECLAWS_DATA_ROOT}` 和敏感 `/proc` 入口 deny，不能让管理台继续把这条历史坏配置写回数据库
+- [`src/components/admin/admin-sandbox-runtime-console.tsx`](./src/components/admin/admin-sandbox-runtime-console.tsx) 负责 manager resource summary、紧凑的 per-Bot pool 列表，以及单 pool 的模态框编辑；服务端 page 只做初始数据读取
+- sandbox-runtime 管理 API 不能把 `bot_sandbox_runtime_pools.api_key` 明文或局部掩码返回给浏览器
+- sandbox-runtime 管理 API 在读写 `defaultDenyRead` 时必须净化 `/etc/mtab`；Linux remote sandbox 的 mount 信息降敏统一依赖标准化 `${WEILING_DATA_ROOT}` 和敏感 `/proc` 入口 deny，不能让管理台继续把这条历史坏配置写回数据库
 - status 文件路径统一通过 `resolveSrtPoolStatusFile()` 解析；缺失 `srt-pool-status.json` 是允许状态，页面/API 仍应展示数据库里的 pool 配置
-- 管理台列表在账号很多时必须优先展示紧凑摘要；列表级详细信息只保留并列展示的 `Port / CPU / 内存`，`重启 / 启停 / 保存配置` 与其他运行细节统一收进模态框，不要回到每个账号一整块展开编辑
+- 管理台列表在 Bot 很多时必须优先展示紧凑摘要；列表级详细信息只保留 `容量 / CPU / 内存`，`重启 / 启停 / 保存配置` 与其他运行细节统一收进模态框
 - sandbox-runtime 管理台里的时间字段必须复用 [`src/components/ui/localized-date-time.tsx`](./src/components/ui/localized-date-time.tsx)，不要在 `admin-sandbox-runtime-console.tsx` render 阶段自行 `new Date()` 格式化
 - `workspaceBasePath` 属于 runtime 派生路径，不允许在浏览器里编辑，也不允许通过 admin PATCH 更新
-- admin pool 表单至少要做本地正整数校验，以及 `minReadyProcesses <= poolSize`、`portRangeStart <= portRangeEnd` 这两条跨字段校验；无效输入不应发出 PATCH 请求
+- admin pool 表单至少要做本地正整数校验以及 `minReadyProcesses <= poolSize`；端口和 workspace 路径由系统分配，不进入普通管理 UI 或 PATCH contract
 - PATCH pool 只允许更新显式配置字段；任何未知字段、`workspaceBasePath` 或 API key material 都必须返回 `400 SRT_POOL_INVALID_CONFIG`
-- pool 配置不存在统一返回 `404 SRT_POOL_NOT_FOUND`，child port 冲突统一返回 `409 SRT_POOL_PORT_CONFLICT`，端口段冲突统一返回 `409 SRT_POOL_PORT_RANGE_CONFLICT`
+- pool 配置不存在统一返回 `404 SRT_POOL_NOT_FOUND`；内部配置发生 child port 或端口段冲突时继续收敛成稳定的 `409` 错误码
 - 管理台展示 owner 信息时优先显示用户邮箱；repository 层继续保持窄接口，不为 admin UI 写 join 型宽查询
 
 ## Detail Presentation
@@ -188,7 +264,7 @@
 - [`src/components/bots/bot-qr-share-panel.tsx`](./src/components/bots/bot-qr-share-panel.tsx) 是详情页二维码与分享的唯一 owner 侧模块：只在 `waiting_for_qr` 展示当前二维码，提供确认后的 `Reissue QR` intent，并组合 [`src/components/bots/bot-qr-share-controls.tsx`](./src/components/bots/bot-qr-share-controls.tsx) 的公开分享开关和复制链接；该模块在左侧控制栏内必须保持单列满宽流，不要在模块内部再拆二维码/分享两列并排
 - [`src/components/bots/qr-code-panel.tsx`](./src/components/bots/qr-code-panel.tsx) 在详情页内使用 compact 模式，二维码区域只保留当前二维码、二维码 ID 和同一行动作组，不重复渲染模块标题、来源说明或预览说明；`Open QR page` 与 `Reissue QR` 必须放在同一个 actions group 中，窄屏允许自动换行
 - 详情页二维码只在 `status=waiting_for_qr` 时展示；即使数据库里仍保留最近一次 `lastQrCode*`，bot 进入 `running` / `degraded` / `stopped` 后也不能继续把旧二维码展示给用户
-- 公开二维码页统一走 [`src/components/bots/public-qr-share-view.tsx`](./src/components/bots/public-qr-share-view.tsx)；该页面不要求 WeClaws 登录态，只轮询公开 `GET /api/share/qr/[token]` 并渲染当前最新二维码
+- 公开二维码页统一走 [`src/components/bots/public-qr-share-view.tsx`](./src/components/bots/public-qr-share-view.tsx)；该页面不要求 weiling 登录态，只轮询公开 `GET /api/share/qr/[token]` 并渲染当前最新二维码
 - 详情页不再保留独立 `运行概览` / `BotStatusCard` 卡片；二维码预览、重出码和分享必须留在独立“二维码与分享”模块，skills 同步和删除必须留在头部操作区
 - bot 详情页里的 `返回 Bots` 按钮保持右对齐
 - 删除 bot 时，实例目录清理是 best-effort；如果 DB 级删除已经成功，目录清理失败只能记日志，不能把接口整体打成 `500`

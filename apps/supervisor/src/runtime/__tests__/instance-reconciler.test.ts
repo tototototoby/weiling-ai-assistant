@@ -1,27 +1,28 @@
-import { constants as fsConstants } from 'node:fs';
-import { access, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { execFile as execFileCallback, spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import {
   BotEventRepository,
   BotInstanceRepository,
+  BotSandboxRuntimePoolRepository,
   UserLlmProfileRepository,
-  UserSandboxRuntimePoolRepository,
   UserRepository,
   WorkspaceRepository,
-  createDatabaseClient,
   migrateDatabase,
-} from '@weclaws/db';
-import { parseSandboxRuntimePoolDefaults, resolveBotInstancePaths } from '@weclaws/shared';
+} from '@weiling-ai/db';
+import {
+  closeTrackedDatabaseClients,
+  createTrackedDatabaseClient as createDatabaseClient,
+} from './test-database-client';
+import { parseSandboxRuntimePoolDefaults, resolveBotInstancePaths } from '@weiling-ai/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SupervisorConfig } from '../../config';
 import { InstanceLock } from '../instance-lock';
 import { InstanceReconciler } from '../instance-reconciler';
 import { ProcessManager } from '../process-manager';
+import { getProcessStartedAt } from '../process-identity';
 import {
   createScriptedFastAgentBinary,
   RESTORED_ACCOUNT_ID,
@@ -30,11 +31,9 @@ import {
 
 const tempDirs: string[] = [];
 const tempChildren: Array<ReturnType<typeof spawn>> = [];
-const require = createRequire(import.meta.url);
-const TSX_IMPORT_PATH = require.resolve('tsx');
-const execFile = promisify(execFileCallback);
 
 afterEach(async () => {
+  closeTrackedDatabaseClients();
   await Promise.all(tempChildren.splice(0).map(async (child) => {
     if (child.exitCode === null && !child.killed) {
       child.kill('SIGKILL');
@@ -44,7 +43,9 @@ afterEach(async () => {
 });
 
 describe('InstanceReconciler', () => {
-  it('starts running candidates, stops stopped candidates, and consumes restart requests', async () => {
+  it.skipIf(process.platform === 'win32')(
+    'starts running candidates, stops stopped candidates, and consumes restart requests',
+    async () => {
     const { botInstances, processManager, reconciler } = await createReconcilerHarness();
 
     await reconciler.runOnce();
@@ -78,7 +79,9 @@ describe('InstanceReconciler', () => {
     }, 10_000);
 
     await processManager.dispose();
-  }, 10_000);
+    },
+    10_000,
+  );
 
   it('waits for restart backoff before starting a crashed instance again', async () => {
     const { botInstances, processManager, reconciler } = await createReconcilerHarness();
@@ -172,6 +175,51 @@ describe('InstanceReconciler', () => {
     await processManager.dispose();
   });
 
+  it('restarts a child after it emits stopped without exiting and the backoff expires', async () => {
+    const { botInstances, processManager, reconciler } = await createReconcilerHarness({
+      binaryScenario: 'stopped_without_exit_once',
+    });
+
+    await reconciler.runOnce(new Date('2026-03-30T00:00:00.000Z'));
+
+    await waitFor(async () => {
+      const current = await botInstances.findById('bot_1');
+      return current?.restartCount === 1
+        && current.status === 'stopped'
+        && !processManager.hasInstance('bot_1');
+    });
+
+    const stoppedBot = await botInstances.findById('bot_1');
+    expect(stoppedBot?.restartBackoffUntil).toBeInstanceOf(Date);
+
+    const backoffUntil = stoppedBot?.restartBackoffUntil;
+    if (!backoffUntil) {
+      throw new Error('Expected restart backoff after terminal runtime failure.');
+    }
+
+    await reconciler.runOnce(new Date(backoffUntil.getTime() - 1));
+    expect(processManager.hasInstance('bot_1')).toBe(false);
+
+    await reconciler.runOnce(new Date(backoffUntil.getTime() + 1));
+
+    await waitFor(async () => {
+      const current = await botInstances.findById('bot_1');
+      return current?.status === 'running' && processManager.hasInstance('bot_1');
+    });
+
+    const restartedBot = await botInstances.findById('bot_1');
+    expect(restartedBot).toMatchObject({
+      restartBackoffUntil: null,
+      restartCount: 0,
+      status: 'running',
+      weixinAccountId: RESTORED_ACCOUNT_ID,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(processManager.hasInstance('bot_1')).toBe(true);
+    await processManager.dispose();
+  });
+
   it('enters failed after four startup crash loops and stops restarting', async () => {
     const { botInstances, processManager, reconciler } = await createReconcilerHarness({
       binaryScenario: 'startup_crash',
@@ -228,7 +276,9 @@ describe('InstanceReconciler', () => {
     await processManager.dispose();
   });
 
-  it('stops a logged-in runtime, clears FastAgent login state, and re-enters qr wait on qr reissue', async () => {
+  it.skipIf(process.platform === 'win32')(
+    'stops a logged-in runtime, clears FastAgent login state, and re-enters qr wait on qr reissue',
+    async () => {
     const { botInstances, config, processManager, reconciler } = await createReconcilerHarness({
       binaryScenario: 'stateful_restore_or_qr',
     });
@@ -282,7 +332,9 @@ describe('InstanceReconciler', () => {
     await expectLoginStateMissing(instancePaths.dataDir);
 
     await processManager.dispose();
-  }, 15_000);
+    },
+    15_000,
+  );
 
   it('terminates orphaned live processes before restarting desired running instances after supervisor loss', async () => {
     const {
@@ -296,6 +348,7 @@ describe('InstanceReconciler', () => {
 
     const orphan = await spawnOrphanedFastAgent(config, 'bot_1');
     const orphanStartedAt = await getProcessStartedAt(orphan.pid!);
+    if (!orphanStartedAt) throw new Error(`Unable to read process start time for pid ${orphan.pid}.`);
 
     await botInstances.markStarting('bot_1', {
       heartbeatAt: new Date('2026-03-30T00:00:00.000Z'),
@@ -341,6 +394,7 @@ describe('InstanceReconciler', () => {
 
     const orphan = await spawnOrphanedFastAgent(config, 'bot_1');
     const orphanStartedAt = await getProcessStartedAt(orphan.pid!);
+    if (!orphanStartedAt) throw new Error(`Unable to read process start time for pid ${orphan.pid}.`);
 
     await botInstances.markStarting('bot_1', {
       heartbeatAt: new Date('2026-03-30T00:00:00.000Z'),
@@ -378,7 +432,7 @@ async function createReconcilerHarness(input: {
 
   const users = new UserRepository(client.db);
   const userLlmProfiles = new UserLlmProfileRepository(client.db);
-  const userSandboxRuntimePools = new UserSandboxRuntimePoolRepository(client.db);
+  const botSandboxRuntimePools = new BotSandboxRuntimePoolRepository(client.db);
   const workspaces = new WorkspaceRepository(client.db);
   const botInstances = new BotInstanceRepository(client.db);
   const botEvents = new BotEventRepository(client.db);
@@ -391,9 +445,10 @@ async function createReconcilerHarness(input: {
 
   const instancesRoot = join(dir, 'instances');
   const instancePaths = resolveBotInstancePaths(instancesRoot, 'bot_1');
-  const fastagentBinaryPath = input.binaryScenario
-    ? await createScriptedFastAgentBinary(dir, input.binaryScenario)
-    : join(dir, 'fastagent');
+  const fastagentBinaryPath = await createScriptedFastAgentBinary(
+    dir,
+    input.binaryScenario ?? 'qr_login_happy',
+  );
 
   await Promise.all([
     mkdir(instancePaths.workspaceDir, { recursive: true }),
@@ -401,17 +456,6 @@ async function createReconcilerHarness(input: {
     mkdir(instancePaths.logDir, { recursive: true }),
   ]);
   await writeManagedBundleFixture(dir);
-  if (!input.binaryScenario) {
-    await writeFile(
-      fastagentBinaryPath,
-      `#!/bin/sh\nexec "${process.execPath}" --import "${TSX_IMPORT_PATH}" "${fileURLToPath(
-        new URL('../../../../../tests/fixtures/mock-fastagent.ts', import.meta.url),
-      )}" "$@"\n`,
-    );
-    await chmod(fastagentBinaryPath, 0o755);
-    await access(fastagentBinaryPath, fsConstants.X_OK);
-  }
-
   await workspaces.create({
     id: 'ws_1',
     name: 'Workspace',
@@ -444,11 +488,16 @@ async function createReconcilerHarness(input: {
   const config: SupervisorConfig = {
     databaseUrl: `file:${join(dir, 'test.sqlite')}`,
     fastagentBinaryPath,
+    internalApiToken: '',
+    internalPort: 8790,
     instancesRoot,
+    larkConfigRoot: instancesRoot,
+    larkCliPath: 'lark-cli',
     mockFastAgentFixturePath: fileURLToPath(
       new URL('../../../../../tests/fixtures/mock-fastagent.ts', import.meta.url),
     ),
     reconcileIntervalMs: 50,
+    reconcileStallTimeoutMs: 120_000,
     sandboxMode: 'remote',
     sandboxApiKey: null,
     sandboxUrl: null,
@@ -464,7 +513,7 @@ async function createReconcilerHarness(input: {
     botEvents,
     botInstances,
     config,
-    userSandboxRuntimePools,
+    botSandboxRuntimePools,
     userLlmProfiles,
   });
 
@@ -529,9 +578,16 @@ async function expectLoginStateMissing(dataDir: string) {
 
 async function spawnOrphanedFastAgent(config: SupervisorConfig, botInstanceId: string) {
   const instancePaths = resolveBotInstancePaths(config.instancesRoot, botInstanceId);
+  const scriptArgs = ['--channel', 'weixin', '--sandbox', 'remote', '--sandbox-url', 'http://localhost:8788', '--output', 'jsonl'];
+  const command = process.platform === 'win32' && /\.(?:cjs|mjs|js)$/i.test(config.fastagentBinaryPath)
+    ? process.execPath
+    : config.fastagentBinaryPath;
+  const args = command === process.execPath
+    ? [config.fastagentBinaryPath, ...scriptArgs]
+    : scriptArgs;
   const child = spawn(
-    config.fastagentBinaryPath,
-    ['--channel', 'weixin', '--sandbox', 'remote', '--sandbox-url', 'http://localhost:8788', '--output', 'jsonl'],
+    command,
+    args,
     {
       cwd: instancePaths.workspaceDir,
       env: {
@@ -554,13 +610,6 @@ async function spawnOrphanedFastAgent(config: SupervisorConfig, botInstanceId: s
   await waitFor(async () => child.pid !== undefined && child.exitCode === null);
 
   return child;
-}
-
-async function getProcessStartedAt(pid: number) {
-  const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'lstart=']);
-  const startedAt = new Date(stdout.trim().replace(/\s+/g, ' '));
-
-  return startedAt.toISOString();
 }
 
 async function waitForChildExit(child: ReturnType<typeof spawn>, timeoutMs: number = 5_000) {

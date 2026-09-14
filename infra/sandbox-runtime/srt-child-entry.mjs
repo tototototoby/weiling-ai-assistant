@@ -52,7 +52,7 @@ async function main() {
     if (process.env.SANDBOX_WORKSPACE_MAP_FILE) {
       logger.info({
         workspaceMapFile: process.env.SANDBOX_WORKSPACE_MAP_FILE,
-      }, 'Installed WeClaws sandbox workspace override');
+      }, 'Installed weiling sandbox workspace override');
     }
 
     const api = new SandboxAPI({

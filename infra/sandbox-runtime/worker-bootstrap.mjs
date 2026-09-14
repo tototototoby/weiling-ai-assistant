@@ -1,10 +1,10 @@
 import { mkdirSync } from 'node:fs';
-import { basename, dirname, join, resolve, sep } from 'node:path';
+import { basename, dirname, join, posix, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const WORKER_BOOTSTRAP_PATCH_MARKER = Symbol.for(
-  'weclaws.sandbox-runtime.worker-bootstrap.writable-rebind',
+  'weiling.sandbox-runtime.worker-bootstrap.writable-rebind',
 );
 const LINUX_MTAB_DENY_TARGET = '/etc/mtab';
 const VIRTUAL_WORKSPACE_ROOT = '/workspace';
@@ -21,12 +21,12 @@ export function collectWritablePathsNeedingRebind(filesystem = {}) {
     denyRead
       .map(stripRecursiveGlobSuffix)
       .filter((pattern) => pattern.length > 0 && !containsGlobChars(pattern))
-      .map((pattern) => resolve(pattern)),
+      .map(resolveSandboxPath),
   );
 
   return uniquePaths(
     allowWrite
-      .map((path) => resolve(path))
+      .map(resolveSandboxPath)
       .filter((path) => denyReadRoots.some((denyRoot) => isSameOrDescendant(path, denyRoot))),
   );
 }
@@ -183,7 +183,8 @@ function stripRecursiveGlobSuffix(pathPattern) {
 }
 
 function isSameOrDescendant(candidatePath, ancestorPath) {
-  return candidatePath === ancestorPath || candidatePath.startsWith(`${ancestorPath}${sep}`);
+  const separator = candidatePath.startsWith('/') && ancestorPath.startsWith('/') ? '/' : sep;
+  return candidatePath === ancestorPath || candidatePath.startsWith(`${ancestorPath}${separator}`);
 }
 
 function findWritableRebindInsertionIndex(args, separatorIndex) {
@@ -218,16 +219,16 @@ function deriveVirtualPathAliasesFromWritablePaths(writablePaths) {
   const normalizedPaths = uniquePaths(
     writablePaths
       .filter((path) => typeof path === 'string' && path.length > 0)
-      .map((path) => resolve(path)),
+      .map(resolveSandboxPath),
   );
   const normalizedPathSet = new Set(normalizedPaths);
 
   for (const workspacePath of normalizedPaths) {
-    if (basename(workspacePath) !== WORKSPACE_DIRECTORY_NAME) {
+    if (sandboxBasename(workspacePath) !== WORKSPACE_DIRECTORY_NAME) {
       continue;
     }
 
-    const dataPath = join(dirname(workspacePath), DATA_DIRECTORY_NAME);
+    const dataPath = sandboxJoin(sandboxDirname(workspacePath), DATA_DIRECTORY_NAME);
 
     if (normalizedPathSet.has(dataPath)) {
       return {
@@ -262,7 +263,7 @@ function normalizeVirtualAliasBinds(virtualPathAliases) {
     }
 
     seenTargets.add(target);
-    binds.push({ source: resolve(source), target });
+    binds.push({ source: resolveSandboxPath(source), target });
   }
 
   return binds;
@@ -286,4 +287,22 @@ function uniqueVirtualAliasBinds(binds) {
 
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function resolveSandboxPath(value) {
+  return typeof value === 'string' && value.startsWith('/')
+    ? posix.resolve(value)
+    : resolve(value);
+}
+
+function sandboxBasename(value) {
+  return value.startsWith('/') ? posix.basename(value) : basename(value);
+}
+
+function sandboxDirname(value) {
+  return value.startsWith('/') ? posix.dirname(value) : dirname(value);
+}
+
+function sandboxJoin(base, child) {
+  return base.startsWith('/') ? posix.join(base, child) : join(base, child);
 }

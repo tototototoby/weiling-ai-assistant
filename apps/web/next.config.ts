@@ -7,7 +7,7 @@ const appRoot = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: path.join(appRoot, '../..'),
-  transpilePackages: ['@weclaws/db', '@weclaws/shared'],
+  transpilePackages: ['@weiling-ai/db', '@weiling-ai/shared'],
 };
 
 export default nextConfig;

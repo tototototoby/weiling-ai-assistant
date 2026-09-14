@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="1130" cy="90" r="260" fill="#FFD9D6" opacity=".5" filter="url(#soft)"/>
+  <circle cx="980" cy="630" r="300" fill="#B3E1F6" opacity=".38" filter="url(#soft)"/>
+  <g transform="translate(790 72) scale(.88)"><defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+
+  </defs>
+
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="256" r="228" fill="url(#pink)"/>
+    <circle cx="256" cy="256" r="171" fill="url(#blue)"/>
+    <circle cx="191" cy="252" r="24" fill="#FCABA7"/>
+    <circle cx="321" cy="252" r="24" fill="#FCABA7"/>
+    <path d="M226 306 C232 330 280 330 286 306" fill="none" stroke="#FCABA7" stroke-width="15" stroke-linecap="round"/>
+    <ellipse cx="210" cy="183" rx="66" ry="34" fill="#FFFFFF" opacity="0.18" transform="rotate(-20 210 183)"/>
+  </g></g>
+  <text x="86" y="150" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="3" fill="#77C9EC">OPEN SOURCE</text>
+  <text x="86" y="246" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="62" font-weight="800" fill="#19323C">微Link ·</text>
+  <text x="86" y="320" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="48" font-weight="800" fill="#19323C">微灵 AI 助手</text>
+  <text x="86" y="388" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="25" fill="#56717A">零门槛接入 · 跨端记忆 · 服务端持续办事</text>
+  <g><rect x="86" y="452" width="150" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="110" cy="475" r="6" fill="#FCABA7"/><text x="126" y="482" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">微信</text></g>
+  <g><rect x="252" y="452" width="170" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="276" cy="475" r="6" fill="#FCABA7"/><text x="292" y="482" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">企业微信</text></g>
+  <g><rect x="438" y="452" width="150" height="46" rx="23" fill="#FFFFFF" stroke="#D9E9ED"/><circle cx="462" cy="475" r="6" fill="#FCABA7"/><text x="478" y="482" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="600" fill="#19323C">飞书</text></g>
+  <text x="86" y="564" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="19" fill="#78939C">github.com/tototototoby/weiling-ai-assistant</text>
+</svg>

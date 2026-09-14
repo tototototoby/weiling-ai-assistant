@@ -69,16 +69,16 @@ describe('product version management', () => {
 });
 
 async function createRepoFixture(version: string) {
-  const repoDir = await mkdtemp(join(tmpdir(), 'weclaws-product-version-'));
+  const repoDir = await mkdtemp(join(tmpdir(), 'weiling-product-version-'));
   tempDirs.push(repoDir);
 
   await Promise.all([
     writeFile(join(repoDir, 'VERSION'), version),
-    writePackageJson(join(repoDir, 'package.json'), 'weclaws', '0.0.1'),
-    writePackageJson(join(repoDir, 'apps/web/package.json'), '@weclaws/web', '0.0.1'),
-    writePackageJson(join(repoDir, 'apps/supervisor/package.json'), '@weclaws/supervisor', '0.0.1'),
-    writePackageJson(join(repoDir, 'packages/db/package.json'), '@weclaws/db', '0.0.1'),
-    writePackageJson(join(repoDir, 'packages/shared/package.json'), '@weclaws/shared', '0.0.1'),
+    writePackageJson(join(repoDir, 'package.json'), 'weiling-ai-assistant', '0.0.1'),
+    writePackageJson(join(repoDir, 'apps/web/package.json'), '@weiling-ai/web', '0.0.1'),
+    writePackageJson(join(repoDir, 'apps/supervisor/package.json'), '@weiling-ai/supervisor', '0.0.1'),
+    writePackageJson(join(repoDir, 'packages/db/package.json'), '@weiling-ai/db', '0.0.1'),
+    writePackageJson(join(repoDir, 'packages/shared/package.json'), '@weiling-ai/shared', '0.0.1'),
   ]);
 
   return repoDir;

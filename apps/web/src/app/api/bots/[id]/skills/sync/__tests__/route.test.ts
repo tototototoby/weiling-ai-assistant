@@ -17,7 +17,7 @@ vi.mock('@/lib/env', () => ({
   resolveInstancesRoot: resolveInstancesRootMock,
 }));
 
-vi.mock('@weclaws/shared/managed-skills', () => ({
+vi.mock('@weiling-ai/shared/managed-skills', () => ({
   resolveManagedSkillsBundleRoot: resolveManagedSkillsBundleRootMock,
   syncManagedSkills: syncManagedSkillsMock,
 }));

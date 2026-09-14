@@ -26,7 +26,7 @@
 
 **sender_id is open_id only**: the event payload carries no display name. Call the contact API separately if you need the sender's name.
 
-**`.content` shape depends on `message_type`** (this key uses a flat Custom schema; see [`events/im/message_receive.go`](../../../events/im/message_receive.go)):
+**`.content` shape depends on `message_type`** (this key uses a flat Custom schema; see upstream [`events/im/message_receive.go`](https://github.com/larksuite/cli/blob/main/events/im/message_receive.go)):
 
 | message_type | `.content` shape | How to read |
 |---|---|---|
@@ -80,7 +80,7 @@ lark-cli event consume im.message.receive_v1 --as bot \
 ```bash
 # example: only messages from the given open_id
 lark-cli event consume im.message.receive_v1 --as bot\
-  --jq 'select(.sender_id=="ou_xxxxxxxxxxxxxxxxxxxxxxxxxx") | {msg_id: .message_id, text: .content}'
+  --jq 'select(.sender_id=="ou_sample_user") | {msg_id: .message_id, text: .content}'
 ```
 
 Get your own open_id via `lark-cli contact +get-user --as user`; other users' via `lark-cli contact +search-user`.

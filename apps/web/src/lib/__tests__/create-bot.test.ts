@@ -10,7 +10,7 @@ import {
   createDatabaseClient,
   migrateDatabase,
   type DatabaseClient,
-} from '@weclaws/db';
+} from '@weiling-ai/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const randomUUIDMock = vi.hoisted(() => vi.fn());

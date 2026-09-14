@@ -1,13 +1,12 @@
-import { execFile as execFileCallback, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { promisify } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getProcessStartedAt } from '../process-identity';
 import { SupervisorSingletonLock } from '../supervisor-singleton-lock';
 
 const tempDirs: string[] = [];
-const execFile = promisify(execFileCallback);
 
 afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { force: true, recursive: true })));
@@ -42,6 +41,24 @@ describe('SupervisorSingletonLock', () => {
     await writeFile(lockPath, JSON.stringify({
       pid: 999_999,
       startedAt: '2026-04-09T00:00:00.000Z',
+      workspaceRoot: dir,
+    }));
+
+    const lock = new SupervisorSingletonLock(lockPath);
+
+    await expect(lock.acquire()).resolves.toBeUndefined();
+    await lock.release();
+  });
+
+  it('replaces a stale lock when a container reuses the current pid', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-supervisor-reused-pid-lock-'));
+    tempDirs.push(dir);
+
+    const lockPath = join(dir, 'storage', 'supervisor.lock');
+    await mkdir(join(dir, 'storage'), { recursive: true });
+    await writeFile(lockPath, JSON.stringify({
+      pid: process.pid,
+      startedAt: '2020-01-01T00:00:00.000Z',
       workspaceRoot: dir,
     }));
 
@@ -92,7 +109,7 @@ describe('SupervisorSingletonLock', () => {
 
     await expect(lock.acquire()).resolves.toBeUndefined();
     const exitResult = await exitPromise;
-    expect(exitResult.code === 0 || exitResult.signal === 'SIGTERM').toBe(true);
+    expect(wasTerminated(exitResult)).toBe(true);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining(`Existing supervisor pid ${child.pid} is still running`),
     );
@@ -148,13 +165,14 @@ describe('SupervisorSingletonLock', () => {
         resolve({ code, signal });
       });
     });
-    expect(exitResult.code === 0 || exitResult.signal === 'SIGTERM').toBe(true);
+    expect(wasTerminated(exitResult)).toBe(true);
   }, 10_000);
 });
 
-async function getProcessStartedAt(pid: number) {
-  const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'lstart=']);
-  const startedAt = new Date(stdout.trim().replace(/\s+/g, ' '));
+function wasTerminated(result: { code: number | null; signal: NodeJS.Signals | null }) {
+  if (process.platform === 'win32') {
+    return result.code !== null || result.signal !== null;
+  }
 
-  return startedAt.toISOString();
+  return result.code === 0 || result.signal === 'SIGTERM';
 }

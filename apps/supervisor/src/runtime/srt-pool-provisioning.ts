@@ -1,30 +1,30 @@
 import type {
-  UserSandboxRuntimePoolRepository,
-  UserSandboxRuntimePoolRecord,
-} from '@weclaws/db';
-import type { SandboxRuntimePoolDefaults } from '@weclaws/shared';
+  BotSandboxRuntimePoolRepository,
+  BotSandboxRuntimePoolRecord,
+} from '@weiling-ai/db';
+import type { SandboxRuntimePoolDefaults } from '@weiling-ai/shared';
 import { writeSandboxRuntimePoolConfigFile } from './srt-pool-config-file';
 
-export interface EnsureUserSandboxRuntimePoolInput {
+export interface EnsureBotSandboxRuntimePoolInput {
+  botInstanceId: string;
   defaults: SandboxRuntimePoolDefaults;
-  ownerUserId: string;
-  repository: UserSandboxRuntimePoolRepository;
+  repository: BotSandboxRuntimePoolRepository;
 }
 
 export interface RenderAllSandboxRuntimePoolsInput {
   filePath: string;
   now?: Date;
-  repository: UserSandboxRuntimePoolRepository;
+  repository: BotSandboxRuntimePoolRepository;
   serviceHost: string;
   workspaceMapDir: string;
 }
 
-export async function ensureUserSandboxRuntimePool(
-  input: EnsureUserSandboxRuntimePoolInput,
-): Promise<UserSandboxRuntimePoolRecord> {
-  return input.repository.ensureForUser({
+export async function ensureBotSandboxRuntimePool(
+  input: EnsureBotSandboxRuntimePoolInput,
+): Promise<BotSandboxRuntimePoolRecord> {
+  return input.repository.ensureForBot({
+    botInstanceId: input.botInstanceId,
     defaults: input.defaults,
-    ownerUserId: input.ownerUserId,
   });
 }
 

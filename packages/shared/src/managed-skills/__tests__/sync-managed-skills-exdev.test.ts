@@ -65,7 +65,7 @@ async function createHarness(input: {
   skills: Record<string, Record<string, string>>;
   version: string;
 }) {
-  const root = await mkdtemp(path.join(tmpdir(), 'weclaws-managed-skills-exdev-'));
+  const root = await mkdtemp(path.join(tmpdir(), 'weiling-managed-skills-exdev-'));
   const instancesRoot = path.join(root, 'instances');
   const bundleRoot = path.join(root, 'bundle');
   const botInstanceId = 'bot_1';

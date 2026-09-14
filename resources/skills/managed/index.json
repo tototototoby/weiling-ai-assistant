@@ -1,5 +1,5 @@
 {
-  "version": "2026-05-18-curated-v11",
+  "version": "0.1.0-beta.1",
   "skills": [
     {
       "name": "agent-browser",
@@ -87,8 +87,8 @@
       "defaultSync": true,
       "emoji": "🧭",
       "source": {
-        "kind": "weclaws-curated",
-        "repo": "weclaws",
+        "kind": "weiling-curated",
+        "repo": "weiling",
         "path": "resources/skills/managed/personal-planner"
       }
     },
@@ -124,45 +124,17 @@
       "name": "weather",
       "path": "weather",
       "defaultSync": true,
-      "homepage": "https://wttr.in/:help",
+      "homepage": "https://open-meteo.com/",
       "emoji": "☔",
       "requires": {
         "bins": [
-          "curl"
-        ]
-      },
-      "install": [
-        {
-          "id": "brew",
-          "kind": "brew",
-          "formula": "curl",
-          "bins": [
-            "curl"
-          ],
-          "label": "Install curl (brew)"
-        }
-      ],
-      "source": {
-        "kind": "upstream-curated",
-        "repo": "steipete/clawdis",
-        "path": "skills/weather"
-      }
-    },
-    {
-      "name": "ppt-skill",
-      "path": "ppt-skill",
-      "defaultSync": true,
-      "homepage": "https://github.com/op7418/guizang-ppt-skill",
-      "emoji": "🖼️",
-      "requires": {
-        "bins": [
-          "node"
+          "python3"
         ]
       },
       "source": {
-        "kind": "weclaws-curated",
-        "repo": "op7418/guizang-ppt-skill",
-        "path": "resources/skills/managed/ppt-skill"
+        "kind": "weiling-curated",
+        "repo": "weiling",
+        "path": "resources/skills/managed/weather"
       }
     },
     {
@@ -177,8 +149,8 @@
         ]
       },
       "source": {
-        "kind": "weclaws-curated",
-        "repo": "weclaws",
+        "kind": "weiling-curated",
+        "repo": "weiling",
         "path": "resources/skills/managed/editorial-card-screenshot"
       }
     },
@@ -564,6 +536,138 @@
         "kind": "upstream-vendored",
         "repo": "larksuite/cli",
         "path": "skills/lark-okr"
+      }
+    },
+    {
+      "name": "weiling-assistant",
+      "path": "weiling-assistant",
+      "defaultSync": true,
+      "emoji": "🤖",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/weiling-assistant"
+      }
+    },
+    {
+      "name": "enterprise-mail",
+      "path": "enterprise-mail",
+      "defaultSync": true,
+      "emoji": "✉️",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/enterprise-mail"
+      }
+    },
+    {
+      "name": "html-report",
+      "path": "html-report",
+      "defaultSync": true,
+      "emoji": "📄",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/html-report"
+      }
+    },
+    {
+      "name": "morning-briefing",
+      "path": "morning-briefing",
+      "defaultSync": true,
+      "emoji": "☀️",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/morning-briefing"
+      }
+    },
+    {
+      "name": "qwen-vision",
+      "path": "qwen-vision",
+      "defaultSync": true,
+      "emoji": "👁️",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/qwen-vision"
+      }
+    },
+    {
+      "name": "office-files",
+      "path": "office-files",
+      "defaultSync": true,
+      "emoji": "📎",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/office-files"
+      }
+    },
+    {
+      "name": "knowledge-query",
+      "path": "knowledge-query",
+      "defaultSync": true,
+      "emoji": "🔎",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/knowledge-query"
+      }
+    },
+    {
+      "name": "broadcast-notice",
+      "path": "broadcast-notice",
+      "defaultSync": true,
+      "emoji": "📣",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/broadcast-notice"
+      }
+    },
+    {
+      "name": "group-task",
+      "path": "group-task",
+      "defaultSync": true,
+      "emoji": "✅",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/group-task"
+      }
+    },
+    {
+      "name": "poster-design",
+      "path": "poster-design",
+      "defaultSync": true,
+      "emoji": "🎨",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/poster-design"
+      }
+    },
+    {
+      "name": "feishu-setup",
+      "path": "feishu-setup",
+      "defaultSync": true,
+      "emoji": "🔗",
+      "license": "MIT",
+      "source": {
+        "kind": "weiling-curated",
+        "repo": "weiling-ai-assistant",
+        "path": "resources/skills/managed/feishu-setup"
       }
     }
   ]

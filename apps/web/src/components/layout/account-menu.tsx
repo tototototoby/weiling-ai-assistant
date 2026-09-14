@@ -96,7 +96,7 @@ export function AccountMenu({ align = 'start', className, email, isAdmin = false
           <DropdownMenuShortcut>{t((messages) => messages.common.comingSoon)}</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/settings">
+          <Link href={isAdmin ? '/admin/llm-profiles' : '/settings'}>
             <Settings className="h-4 w-4" />
             <span>{t((messages) => messages.shell.accountSettings)}</span>
           </Link>

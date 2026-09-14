@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ErrorNotice } from '@/components/ui/error-notice';
 
 interface BotQrShareControlsProps {
+  apiBasePath?: string;
   botId: string;
   disabled: boolean;
   onPendingChange(isPending: boolean): void;
@@ -25,7 +26,7 @@ interface BotQrShareResponse {
 
 type QrShareAction = 'disable-qr-share' | 'enable-qr-share';
 
-export function BotQrShareControls({ botId, disabled, onPendingChange }: BotQrShareControlsProps) {
+export function BotQrShareControls({ apiBasePath, botId, disabled, onPendingChange }: BotQrShareControlsProps) {
   const { t } = useLocale();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<QrShareAction | null>(null);
@@ -33,6 +34,7 @@ export function BotQrShareControls({ botId, disabled, onPendingChange }: BotQrSh
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isDisabled = disabled || isPending;
+  const qrShareEndpoint = apiBasePath ?? `/api/bots/${botId}`;
 
   useEffect(() => {
     onPendingChange(isPending);
@@ -43,7 +45,7 @@ export function BotQrShareControls({ botId, disabled, onPendingChange }: BotQrSh
 
     void (async () => {
       try {
-        const response = await fetch(`/api/bots/${botId}/qr-share`);
+        const response = await fetch(`${qrShareEndpoint}/qr-share`);
         const payload = (await response.json()) as BotQrShareResponse;
 
         if (isCancelled) {
@@ -66,7 +68,7 @@ export function BotQrShareControls({ botId, disabled, onPendingChange }: BotQrSh
     return () => {
       isCancelled = true;
     };
-  }, [botId]);
+  }, [qrShareEndpoint]);
 
   return (
     <div className="grid gap-3 rounded-[1.2rem] border border-[color:var(--border-soft)]/85 bg-[color:var(--surface-muted)]/72 px-4 py-4">
@@ -139,7 +141,7 @@ export function BotQrShareControls({ botId, disabled, onPendingChange }: BotQrSh
 
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/bots/${botId}/qr-share`, { method });
+        const response = await fetch(`${qrShareEndpoint}/qr-share`, { method });
         const payload = (await response.json()) as BotQrShareResponse;
 
         if (!response.ok) {

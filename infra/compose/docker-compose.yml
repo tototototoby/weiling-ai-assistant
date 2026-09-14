@@ -1,14 +1,23 @@
-name: weclaws
+name: weiling-ai-assistant
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-20m}
+    max-file: ${DOCKER_LOG_MAX_FILES:-3}
 
 services:
   browserless:
-    image: ghcr.io/browserless/chromium
+    profiles:
+      - browserless
+    image: ghcr.io/browserless/chromium:v2.56.7@sha256:b1ba7b054af2891a8199f884d4bd249cf8c3bd2fa8a97b339077e40f92803ba8
     restart: unless-stopped
     environment:
       TOKEN: ${BROWSERLESS_TOKEN}
       CONCURRENT: ${BROWSERLESS_CONCURRENT:-2}
       QUEUED: ${BROWSERLESS_QUEUED:-2}
       TIMEOUT: ${BROWSERLESS_TIMEOUT:-120000}
+    logging: *default-logging
 
   sandbox-runtime:
     build:
@@ -22,8 +31,7 @@ services:
         PNPM_VERSION: ${PNPM_VERSION:-9.15.4}
         UV_VERSION: ${UV_VERSION:-0.11.7}
     restart: unless-stopped
-    ports:
-      - "${SANDBOX_RUNTIME_PORT:-8788}:${SANDBOX_RUNTIME_PORT:-8788}"
+    logging: *default-logging
     environment:
       BROWSERLESS_API_KEY: ${BROWSERLESS_TOKEN}
       BROWSERLESS_API_URL: ${BROWSERLESS_API_URL:-http://browserless:3000}
@@ -34,9 +42,9 @@ services:
       SRT_POOL_STATUS_FILE: /app/storage/sandbox-runtime-private/srt-pool-status.json
       SRT_MANAGER_PORT: ${SANDBOX_RUNTIME_PORT:-8788}
     volumes:
-      - sandbox_user_workspaces:/app/apps/sandbox-runtime/user-workspaces
-      - claws_instances:/app/storage/instances
-      - sandbox_runtime_private:/app/storage/sandbox-runtime-private
+      - weiling_sandbox_user_workspaces:/app/apps/sandbox-runtime/user-workspaces
+      - weiling_instances:/app/storage/instances
+      - weiling_sandbox_runtime_private:/app/storage/sandbox-runtime-private
     cap_drop:
       - ALL
     cap_add:
@@ -57,7 +65,10 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/supervisor.Dockerfile
+      args:
+        LARK_CLI_NPM_VERSION: ${LARK_CLI_NPM_VERSION:-1.0.32}
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       sandbox-runtime:
         condition: service_healthy
@@ -66,12 +77,18 @@ services:
       DATABASE_URL: file:/app/storage/sqlite/db.sqlite
       FASTAGENT_SANDBOX_MODE: ${FASTAGENT_SANDBOX_MODE:-remote}
       INSTANCES_ROOT: /app/storage/instances
+      WEILING_INTERNAL_PORT: ${WEILING_INTERNAL_PORT:-${WECLAWS_INTERNAL_PORT:-8790}}
+      WEILING_INTERNAL_API_TOKEN: ${WEILING_INTERNAL_API_TOKEN:-${WECLAWS_INTERNAL_API_TOKEN:-}}
+      WEILING_LARK_CLI_PATH: ${WEILING_LARK_CLI_PATH:-${WECLAWS_LARK_CLI_PATH:-lark-cli}}
+      WEILING_LARK_CONFIG_ROOT: ${WEILING_LARK_CONFIG_ROOT:-/app/storage/lark}
+      WEILING_QWEN_API_KEY: ${WEILING_QWEN_API_KEY:-${WECLAWS_QWEN_API_KEY:-}}
       RECONCILE_INTERVAL_MS: ${RECONCILE_INTERVAL_MS:-2000}
+      RECONCILE_STALL_TIMEOUT_MS: ${RECONCILE_STALL_TIMEOUT_MS:-120000}
       SRT_SERVICE_HOST: sandbox-runtime
       SRT_POOL_CONFIG_FILE: /app/storage/sandbox-runtime-private/srt-pools.json
       SRT_POOL_STATUS_FILE: /app/storage/sandbox-runtime-private/srt-pool-status.json
       SRT_WORKSPACE_MAP_DIR: /app/storage/sandbox-runtime-private/workspace-map
-      SRT_DEFAULT_POOL_SIZE: ${SRT_DEFAULT_POOL_SIZE:-3}
+      SRT_DEFAULT_POOL_SIZE: ${SRT_DEFAULT_POOL_SIZE:-1}
       SRT_DEFAULT_MIN_READY_PROCESSES: ${SRT_DEFAULT_MIN_READY_PROCESSES:-1}
       SRT_DEFAULT_SESSION_TIMEOUT_MS: ${SRT_DEFAULT_SESSION_TIMEOUT_MS:-600000}
       SRT_DEFAULT_MAX_CONCURRENT_INIT: ${SRT_DEFAULT_MAX_CONCURRENT_INIT:-1}
@@ -86,15 +103,18 @@ services:
       SRT_DEFAULT_DENY_READ: ${SRT_DEFAULT_DENY_READ:-/etc/passwd,/etc/passwd-,/etc/shadow,/etc/shadow-,/etc/group,/etc/group-,/etc/gshadow,/etc/gshadow-,/etc/mtab,/proc/self/mountinfo,/proc/*/mountinfo,/proc/self/mounts,/proc/*/mounts,/proc/mounts,/proc/self/mountstats,/proc/*/mountstats,/proc/self/cmdline,/proc/1/cmdline,/proc/*/cmdline,/proc/self/environ,/proc/1/environ,/proc/*/environ,/proc/kallsyms,/proc/self/cgroup,/proc/*/cgroup,/proc/cgroups,/root,~/.ssh,~/.aws}
       SRT_DEFAULT_DENY_WRITE: ${SRT_DEFAULT_DENY_WRITE:-.env,~/.ssh,~/.aws}
     volumes:
-      - claws_sqlite:/app/storage/sqlite
-      - claws_instances:/app/storage/instances
-      - sandbox_runtime_private:/app/storage/sandbox-runtime-private
+      - weiling_sqlite:/app/storage/sqlite
+      - weiling_instances:/app/storage/instances
+      - weiling_lark:/app/storage/lark
+      - weiling_sandbox_runtime_private:/app/storage/sandbox-runtime-private
+      - weiling_secrets:/app/storage/secrets:ro
 
   web:
     build:
       context: ../..
       dockerfile: infra/docker/web.Dockerfile
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       sandbox-runtime:
         condition: service_healthy
@@ -110,8 +130,10 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       WEB_ADMIN_EMAILS: ${WEB_ADMIN_EMAILS:-}
       WEB_USER_BOT_LIMIT: ${WEB_USER_BOT_LIMIT:-0}
+      SUPERVISOR_INTERNAL_URL: ${SUPERVISOR_INTERNAL_URL:-http://supervisor:8790}
+      WEILING_INTERNAL_API_TOKEN: ${WEILING_INTERNAL_API_TOKEN:-${WECLAWS_INTERNAL_API_TOKEN:-}}
       SRT_POOL_STATUS_FILE: /app/storage/sandbox-runtime-private/srt-pool-status.json
-      SRT_DEFAULT_POOL_SIZE: ${SRT_DEFAULT_POOL_SIZE:-3}
+      SRT_DEFAULT_POOL_SIZE: ${SRT_DEFAULT_POOL_SIZE:-1}
       SRT_DEFAULT_MIN_READY_PROCESSES: ${SRT_DEFAULT_MIN_READY_PROCESSES:-1}
       SRT_DEFAULT_SESSION_TIMEOUT_MS: ${SRT_DEFAULT_SESSION_TIMEOUT_MS:-600000}
       SRT_DEFAULT_MAX_CONCURRENT_INIT: ${SRT_DEFAULT_MAX_CONCURRENT_INIT:-1}
@@ -126,9 +148,10 @@ services:
       SRT_DEFAULT_DENY_READ: ${SRT_DEFAULT_DENY_READ:-/etc/passwd,/etc/passwd-,/etc/shadow,/etc/shadow-,/etc/group,/etc/group-,/etc/gshadow,/etc/gshadow-,/etc/mtab,/proc/self/mountinfo,/proc/*/mountinfo,/proc/self/mounts,/proc/*/mounts,/proc/mounts,/proc/self/mountstats,/proc/*/mountstats,/proc/self/cmdline,/proc/1/cmdline,/proc/*/cmdline,/proc/self/environ,/proc/1/environ,/proc/*/environ,/proc/kallsyms,/proc/self/cgroup,/proc/*/cgroup,/proc/cgroups,/root,~/.ssh,~/.aws}
       SRT_DEFAULT_DENY_WRITE: ${SRT_DEFAULT_DENY_WRITE:-.env,~/.ssh,~/.aws}
     volumes:
-      - claws_sqlite:/app/storage/sqlite
-      - claws_instances:/app/storage/instances
-      - sandbox_runtime_private:/app/storage/sandbox-runtime-private
+      - weiling_sqlite:/app/storage/sqlite
+      - weiling_instances:/app/storage/instances
+      - weiling_sandbox_runtime_private:/app/storage/sandbox-runtime-private
+      - weiling_secrets:/app/storage/secrets
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/login', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
       interval: 30s
@@ -137,7 +160,9 @@ services:
       start_period: 20s
 
 volumes:
-  claws_sqlite:
-  claws_instances:
-  sandbox_user_workspaces:
-  sandbox_runtime_private:
+  weiling_sqlite:
+  weiling_instances:
+  weiling_lark:
+  weiling_secrets:
+  weiling_sandbox_user_workspaces:
+  weiling_sandbox_runtime_private:

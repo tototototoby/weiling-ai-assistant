@@ -1,11 +1,13 @@
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { resolveBotInstancePaths } from '@weclaws/shared';
+import { resolveBotInstancePaths } from '@weiling-ai/shared';
 
 const FASTAGENT_LOGIN_STATE_FILES = [
   'accounts-roster.jsonl',
   'accounts-runtime.jsonl',
   'bindings.jsonl',
+  'plugin-secrets.jsonl',
+  'plugin-state.jsonl',
 ] as const;
 
 export interface ClearBotLoginStateInput {

@@ -138,9 +138,43 @@ async function getRequiredProcessStartedAt(pid: number) {
 }
 
 async function getProcessStartedAt(pid: number) {
+  if (process.platform === 'win32') {
+    return getWindowsProcessStartedAt(pid);
+  }
+
   try {
     const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'lstart=']);
     const timestamp = Date.parse(stdout.trim().replace(/\s+/g, ' '));
+
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+
+    return new Date(timestamp).toISOString();
+  } catch {
+    return null;
+  }
+}
+
+async function getWindowsProcessStartedAt(pid: number) {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return null;
+  }
+
+  const script = [
+    `$process = Get-Process -Id ${pid} -ErrorAction Stop`,
+    "$process.StartTime.ToUniversalTime().ToString('o')",
+  ].join('; ');
+
+  try {
+    const { stdout } = await execFile('powershell.exe', [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      script,
+    ]);
+    const timestamp = Date.parse(stdout.trim());
 
     if (Number.isNaN(timestamp)) {
       return null;

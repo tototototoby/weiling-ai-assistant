@@ -87,6 +87,7 @@ export interface ManagedSkillsOperationResult {
 export interface SyncManagedSkillsInput {
   botInstanceId: string;
   bundleRoot: string;
+  enabledSkillNames?: readonly string[];
   instancesRoot: string;
   operation: ManagedSkillsOperation;
 }
@@ -164,6 +165,7 @@ export async function syncManagedSkills(input: SyncManagedSkillsInput): Promise<
 
     return await syncAllManagedSkills({
       bundleRoot: input.bundleRoot,
+      enabledSkillNames: input.enabledSkillNames,
       managedPaths,
       operation,
     });
@@ -174,6 +176,7 @@ export async function syncManagedSkills(input: SyncManagedSkillsInput): Promise<
 
 async function syncAllManagedSkills(input: {
   bundleRoot: string;
+  enabledSkillNames?: readonly string[];
   managedPaths: ManagedSkillPaths;
   operation: Extract<ManagedSkillsOperation, { type: 'sync-all-managed' }>;
 }): Promise<ManagedSkillsOperationResult> {
@@ -202,8 +205,22 @@ async function syncAllManagedSkills(input: {
     bundleVersion: manifest.version,
   });
   const manifestSkillNames = new Set(manifest.skills.map((skill) => skill.name));
+  const enabledSkillNames = input.enabledSkillNames === undefined
+    ? manifestSkillNames
+    : new Set(input.enabledSkillNames);
+  const desiredSkills = manifest.skills.filter((skill) => enabledSkillNames.has(skill.name));
+  const desiredSkillNames = new Set(desiredSkills.map((skill) => skill.name));
 
-  for (const skill of manifest.skills) {
+  for (const skillName of enabledSkillNames) {
+    if (!manifestSkillNames.has(skillName)) {
+      result.errors.push({
+        code: 'SKILL_NOT_IN_MANIFEST',
+        message: `Enabled managed skill is not present in the bundle manifest: ${skillName}`,
+      });
+    }
+  }
+
+  for (const skill of desiredSkills) {
     let targetPath: string;
     let sourceDir: string;
 
@@ -251,7 +268,7 @@ async function syncAllManagedSkills(input: {
   }
 
   for (const [skillName, snapshot] of existingMetadataByName) {
-    if (manifestSkillNames.has(skillName)) {
+    if (desiredSkillNames.has(skillName)) {
       continue;
     }
 
@@ -450,7 +467,7 @@ async function getSkillOwnershipState(targetPath: string, metadataSnapshot: Mana
   };
 }
 
-async function readManagedSkillsMetadata(metadataPath: string): Promise<ManagedSkillsMetadata | null> {
+export async function readManagedSkillsMetadata(metadataPath: string): Promise<ManagedSkillsMetadata | null> {
   try {
     const raw = await readFile(metadataPath, 'utf8');
     return ManagedSkillsMetadataSchema.parse(JSON.parse(raw));

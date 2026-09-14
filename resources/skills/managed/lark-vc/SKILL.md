@@ -80,8 +80,8 @@ lark-cli vc meeting get --params '{"meeting_id":"<meeting_id>","with_participant
 |---------|---------|--------|
 | 参会人快照（谁参加过、何时入/离会，任意时点）| `vc meeting get --with-participants` | 本 skill |
 | 已结束会议的发言内容 | `vc +notes` 取 `verbatim_doc_token` 再 `docs +fetch --api-version v2` | 本 skill |
-| **进行中会议**的实时事件流（转写、聊天、共享、会中加入/离开）| `vc +meeting-events` | [`lark-vc-agent`](../lark-vc-agent/SKILL.md) |
-| **Agent 真实入会 / 离会** | `vc +meeting-join` / `vc +meeting-leave` | [`lark-vc-agent`](../lark-vc-agent/SKILL.md) |
+| **进行中会议**的实时事件流（转写、聊天、共享、会中加入/离开）| `vc +meeting-events` | `lark-vc-agent`（需另行安装，当前 bundle 不包含） |
+| **Agent 真实入会 / 离会** | `vc +meeting-join` / `vc +meeting-leave` | `lark-vc-agent`（需另行安装，当前 bundle 不包含） |
 
 ## 资源关系
 
@@ -125,7 +125,7 @@ Shortcut 是对常用操作的高级封装（`lark-cli vc +<verb> [flags]`）。
 - 使用 `+notes` 命令时，必须阅读 [references/lark-vc-notes.md](references/lark-vc-notes.md)，了解查询参数、产物类型和返回值结构。
 - 使用 `+recording` 命令时，必须阅读 [references/lark-vc-recording.md](references/lark-vc-recording.md)，了解查询参数和返回值结构。
 
-> **Agent 参会相关命令已独立**：`+meeting-join` / `+meeting-leave` / `+meeting-events` 请使用 [`lark-vc-agent`](../lark-vc-agent/SKILL.md) 技能。
+> **Agent 参会相关命令已独立**：`+meeting-join` / `+meeting-leave` / `+meeting-events` 请使用 `lark-vc-agent`（需另行安装，当前 bundle 不包含） 技能。
 
 ## API Resources
 
@@ -165,4 +165,4 @@ lark-cli vc meeting get --params '{"meeting_id": "<meeting_id>", "with_participa
 | `+search` | `vc:meeting.search:read` |
 | `meeting.get` | `vc:meeting.meetingevent:read` |
 
-> Agent 参会相关 scope（`vc:meeting.bot.join:write` / `vc:meeting.meetingevent:read`）见 [`lark-vc-agent`](../lark-vc-agent/SKILL.md)。
+> Agent 参会相关 scope（`vc:meeting.bot.join:write` / `vc:meeting.meetingevent:read`）见 `lark-vc-agent`（需另行安装，当前 bundle 不包含）。

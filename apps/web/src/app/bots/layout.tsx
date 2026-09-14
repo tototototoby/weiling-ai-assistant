@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { isAdminEmail } from '@/lib/admin';
 import { getFastAgentCliVersion } from '@/lib/fastagent-cli-version';
 import { requireServerSession } from '@/lib/session';
 
-export default async function BotsLayout({ children }: LayoutProps<'/bots'>) {
+export default async function BotsLayout({ children }: { children: ReactNode }) {
   const session = await requireServerSession();
   const fastAgentCliVersion = await getFastAgentCliVersion();
 

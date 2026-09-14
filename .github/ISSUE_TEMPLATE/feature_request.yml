@@ -1,0 +1,33 @@
+name: Feature request
+description: 提议一个有清晰使用场景的改进
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 用一个真实但脱敏的场景说明现在卡在哪里。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你建议怎么做
+      description: 说明入口、用户、权限、失败方式和是否产生外部副作用。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 你尝试过的替代方案
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已确认这不是安全问题，也没有附带真实凭据或私人数据。
+          required: true

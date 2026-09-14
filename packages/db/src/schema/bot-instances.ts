@@ -1,4 +1,4 @@
-import { BOT_DESIRED_STATES, BOT_STATUSES } from '@weclaws/shared';
+import { BOT_DESIRED_STATES, BOT_STATUSES } from '@weiling-ai/shared';
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { users } from './users';
 import { userLlmProfiles } from './user-llm-profiles';
@@ -30,6 +30,7 @@ export const botInstances = sqliteTable(
     qrReissueRequestedAt: integer('qr_reissue_requested_at', { mode: 'timestamp_ms' }),
     lastQrCodeId: text('last_qr_code_id'),
     lastQrCodeUrl: text('last_qr_code_url'),
+    qrCodeIssuedAt: integer('qr_code_issued_at', { mode: 'timestamp_ms' }),
     weixinAccountId: text('weixin_account_id'),
     lastErrorCode: text('last_error_code'),
     lastErrorMessage: text('last_error_message'),

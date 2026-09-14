@@ -58,6 +58,7 @@ export function BotQrSharePanel({ bot, onBotUpdated }: BotQrSharePanelProps) {
             compact
             embedded
             qrCodeId={shouldShowQr ? bot.lastQrCodeId : null}
+            qrCodeIssuedAt={shouldShowQr ? bot.qrCodeIssuedAt : null}
             qrCodeUrl={shouldShowQr ? bot.lastQrCodeUrl : null}
           />
         </div>

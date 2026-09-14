@@ -3,24 +3,37 @@ node_modules
 next-env.d.ts
 dist
 coverage
-.env
-.env.local
-.env.*.local
+
+# Local environment and credentials. Keep examples only.
+.env*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
 .doc/
 .docs/
 .superpowers/
-storage/sqlite/*.db
-storage/sqlite/*.db-*
-storage/sqlite/*.sqlite
-storage/sqlite/*.sqlite-*
-storage/instances/*
-storage/sandbox-runtime-private/*
-storage/sandbox-runtime-user-workspaces/*
-storage/supervisor.lock
-!storage/instances/.gitkeep
-!.env.example
+# Runtime state is never source code.
+storage/**
+!storage/**/
+!storage/**/.gitkeep
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
 .DS_Store
+Thumbs.db
 
 .playwright-*/
 __pycache__/
 *.log
+
+# Generated/offline distribution bundles are release artifacts, not source.
+*.tar.gz
+*.tgz

@@ -15,7 +15,7 @@ afterEach(async () => {
 
 describe('workspace-root-override', () => {
   it('resolves a mapped real workspace path from the workspace map file', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'weclaws-sandbox-runtime-override-'));
+    const dir = await mkdtemp(join(tmpdir(), 'weiling-sandbox-runtime-override-'));
     tempDirs.push(dir);
 
     const workspaceMapFile = join(dir, 'workspace-map.json');
@@ -35,7 +35,7 @@ describe('workspace-root-override', () => {
   });
 
   it('patches WorkspaceManager.getWorkspacePath to return the mapped real workspace', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'weclaws-sandbox-runtime-patch-'));
+    const dir = await mkdtemp(join(tmpdir(), 'weiling-sandbox-runtime-patch-'));
     tempDirs.push(dir);
 
     const workspaceMapFile = join(dir, 'workspace-map.json');

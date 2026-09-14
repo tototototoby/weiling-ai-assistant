@@ -1,4 +1,4 @@
 {"type":"process_started","timestamp":"2026-03-30T10:19:04.405Z","pid":85350,"message":"IM runtime process started","data":{"channel":"weixin"},"agentId":"bot_fresh_contract"}
-{"type":"qr_code","timestamp":"2026-03-30T10:19:04.560Z","pid":85350,"message":"Weixin QR code ready","data":{"qrCodeUrl":"https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=81617e3de8b98a196dd0842c26bdba4b&bot_type=3"},"agentId":"bot_fresh_contract"}
+{"type":"qr_code","timestamp":"2026-03-30T10:19:04.560Z","pid":85350,"message":"Weixin QR code ready","data":{"qrCodeUrl":"https://liteapp.weixin.qq.com/q/7GiQu1?qrcode=00000000000000000000000000000000&bot_type=3"},"agentId":"bot_fresh_contract"}
 {"type":"stopping","timestamp":"2026-03-30T10:19:19.324Z","pid":85350,"message":"IM runtime stopping","data":{"reason":"signal"},"agentId":"bot_fresh_contract"}
 {"type":"stopped","timestamp":"2026-03-30T10:19:19.331Z","pid":85350,"message":"IM runtime stopped","data":{"exitCode":0,"reason":"signal"},"agentId":"bot_fresh_contract"}

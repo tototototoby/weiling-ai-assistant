@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { createDatabaseClient, migrateDatabase } from '../../client.js';
+import { migrateDatabase } from '../../client.js';
+import {
+  closeTrackedDatabaseClients,
+  createTrackedDatabaseClient as createDatabaseClient,
+} from './test-database-client.js';
 import { BotEventRepository } from '../bot-event-repository.js';
 import { BotInstanceRepository } from '../bot-instance-repository.js';
 import { UserRepository } from '../user-repository.js';
@@ -11,6 +15,7 @@ import { WorkspaceRepository } from '../workspace-repository.js';
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  closeTrackedDatabaseClients();
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
@@ -244,7 +249,7 @@ describe('BotInstanceRepository', () => {
       errorCode: 'LLM_PROFILE_INVALID',
       errorMessage: 'Bot LLM profile is invalid or inaccessible: profile_missing.',
       failedAt: new Date('2026-03-30T00:00:00.000Z'),
-      restartCount: 0,
+      restartCount: 4,
     });
 
     const restartRequestedAt = new Date('2026-03-30T00:05:00.000Z');
@@ -254,6 +259,7 @@ describe('BotInstanceRepository', () => {
     expect(restarted).toMatchObject({
       desiredState: 'running',
       id: 'bot_1',
+      restartCount: 0,
       restartRequestedAt,
       status: 'stopped',
     });
@@ -350,7 +356,7 @@ describe('BotInstanceRepository', () => {
       errorCode: 'RUNTIME_ERROR',
       errorMessage: 'FastAgent runtime failed.',
       failedAt: new Date('2026-03-30T00:00:00.000Z'),
-      restartCount: 1,
+      restartCount: 4,
     });
 
     const requestedAt = new Date('2026-03-30T00:01:00.000Z');
@@ -361,6 +367,7 @@ describe('BotInstanceRepository', () => {
       desiredState: 'running',
       id: 'bot_1',
       qrReissueRequestedAt: requestedAt,
+      restartCount: 0,
       status: 'stopped',
     });
     expect(runnable.map((item) => item.id)).toEqual(['bot_1']);
@@ -421,6 +428,7 @@ describe('BotInstanceRepository', () => {
         heartbeatAt: Date | null;
         lastQrCodeId: string | null;
         lastQrCodeUrl: string | null;
+        qrCodeIssuedAt: Date | null;
         status: string;
       } | null>;
       recordLoginConfirmed(
@@ -510,6 +518,11 @@ describe('BotInstanceRepository', () => {
       processPid: 123,
       processStartedAt: startAt,
     });
+    await runtimeRepository.recordRuntimeError('bot_1', {
+      errorCode: 'RUNTIME_ERROR',
+      errorMessage: 'Previous startup failed.',
+      observedAt: new Date('2026-03-30T00:00:04.000Z'),
+    });
     const qrReady = await runtimeRepository.recordQrCode('bot_1', {
       observedAt: qrAt,
       qrCodeId: 'qr_1',
@@ -561,8 +574,11 @@ describe('BotInstanceRepository', () => {
     });
     expect(qrReady).toMatchObject({
       heartbeatAt: qrAt,
+      lastErrorCode: null,
+      lastErrorMessage: null,
       lastQrCodeId: 'qr_1',
       lastQrCodeUrl: 'https://example.com/qrcode/1',
+      qrCodeIssuedAt: qrAt,
       status: 'waiting_for_qr',
     });
     expect(loggedIn).toMatchObject({
@@ -598,6 +614,7 @@ describe('BotInstanceRepository', () => {
       status: 'stopped',
     });
     expect(consumed).toMatchObject({
+      restartCount: 0,
       restartRequestedAt: null,
     });
     expect(scheduled).toMatchObject({

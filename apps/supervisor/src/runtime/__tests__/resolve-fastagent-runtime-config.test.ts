@@ -5,14 +5,18 @@ import { tmpdir } from 'node:os';
 import {
   UserLlmProfileRepository,
   UserRepository,
-  createDatabaseClient,
   migrateDatabase,
-} from '@weclaws/db';
+} from '@weiling-ai/db';
+import {
+  closeTrackedDatabaseClients,
+  createTrackedDatabaseClient as createDatabaseClient,
+} from './test-database-client';
 import { resolveFastAgentRuntimeConfig } from '../resolve-fastagent-runtime-config';
 
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  closeTrackedDatabaseClients();
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
@@ -126,7 +130,7 @@ describe('resolveFastAgentRuntimeConfig', () => {
 });
 
 async function createHarness() {
-  const dir = await mkdtemp(join(tmpdir(), 'weclaws-supervisor-llm-profile-'));
+  const dir = await mkdtemp(join(tmpdir(), 'weiling-supervisor-llm-profile-'));
   tempDirs.push(dir);
 
   const client = createDatabaseClient({

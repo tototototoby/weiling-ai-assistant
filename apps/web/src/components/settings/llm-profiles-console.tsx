@@ -25,6 +25,8 @@ import type { LlmProfileItem } from '@/lib/llm-profiles';
 
 interface LlmProfilesConsoleProps {
   profiles: LlmProfileItem[];
+  canManageRegistrationDefault?: boolean;
+  registrationDefaultProfileId?: string | null;
 }
 
 interface LlmProfileMutationResponse {
@@ -50,7 +52,11 @@ interface DeleteLlmProfileResponse {
 
 const NO_API_TYPE = '__none__';
 
-export function LlmProfilesConsole({ profiles }: LlmProfilesConsoleProps) {
+export function LlmProfilesConsole({
+  profiles,
+  canManageRegistrationDefault = false,
+  registrationDefaultProfileId = null,
+}: LlmProfilesConsoleProps) {
   const { t } = useLocale();
   const nameLabel = t((messages) => messages.settings.profileName);
   const providerLabel = t((messages) => messages.settings.provider);
@@ -61,6 +67,7 @@ export function LlmProfilesConsole({ profiles }: LlmProfilesConsoleProps) {
   const apiKeyLabel = t((messages) => messages.settings.apiKey);
   const apiTypePlaceholder = t((messages) => messages.settings.apiTypeSelectPlaceholder);
   const [profileItems, setProfileItems] = useState(profiles);
+  const [defaultProfileId, setDefaultProfileId] = useState(registrationDefaultProfileId);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [provider, setProvider] = useState('');
@@ -253,12 +260,24 @@ export function LlmProfilesConsole({ profiles }: LlmProfilesConsoleProps) {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="grid gap-1">
-                  <strong className="text-base font-semibold tracking-[0.02em] text-foreground">{profile.name}</strong>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-base font-semibold tracking-[0.02em] text-foreground">{profile.name}</strong>
+                    {defaultProfileId === profile.id ? (
+                      <span className="rounded-full border border-[color:var(--border-soft)] px-2 py-1 text-xs font-medium text-muted-foreground">
+                        {t((messages) => messages.settings.inviteDefaultBadge)}
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="m-0 text-sm text-muted-foreground">
                     {profile.provider} / {profile.model}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {canManageRegistrationDefault && defaultProfileId !== profile.id ? (
+                    <Button onClick={() => setAsRegistrationDefault(profile.id)} type="button" variant="outline">
+                      {t((messages) => messages.settings.setInviteDefault)}
+                    </Button>
+                  ) : null}
                   <Button onClick={() => startEditing(profile)} type="button" variant="outline">
                     {t((messages) => messages.settings.edit)}
                   </Button>
@@ -303,6 +322,32 @@ export function LlmProfilesConsole({ profiles }: LlmProfilesConsoleProps) {
     setApiKey('');
     setErrorMessage(null);
     setSuccessMessage(null);
+  }
+
+  function setAsRegistrationDefault(profileId: string) {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    startTransition(async () => {
+      try {
+        const response = await fetch('/api/admin/default-llm-profile', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ profileId }),
+        });
+        const result = await response.json() as {
+          data: { profileId: string } | null;
+          error: { message: string } | null;
+        };
+        if (!response.ok || !result.data) {
+          setErrorMessage(result.error?.message ?? t((messages) => messages.settings.setInviteDefaultFailed));
+          return;
+        }
+        setDefaultProfileId(result.data.profileId);
+        setSuccessMessage(t((messages) => messages.settings.setInviteDefaultSuccess));
+      } catch {
+        setErrorMessage(t((messages) => messages.settings.setInviteDefaultFailed));
+      }
+    });
   }
 
   function resetForm() {

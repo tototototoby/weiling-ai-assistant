@@ -1,4 +1,4 @@
-import { FastAgentJsonlEventSchema, type FastAgentJsonlEvent } from '@weclaws/shared';
+import { FastAgentJsonlEventSchema, type FastAgentJsonlEvent } from '@weiling-ai/shared';
 
 export interface InvalidFastAgentLine {
   error: Error;

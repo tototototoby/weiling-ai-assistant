@@ -1,16 +1,19 @@
 {
-  "name": "@weclaws/supervisor",
-  "version": "0.2.7",
+  "name": "@weiling-ai/supervisor",
+  "version": "0.1.0-beta.1",
   "private": true,
   "type": "module",
   "dependencies": {
     "@fastagent/cli": "0.8.4",
-    "@weclaws/db": "workspace:*",
-    "@weclaws/shared": "workspace:*",
-    "better-sqlite3": "^12.10.0"
+    "@weiling-ai/db": "workspace:*",
+    "@weiling-ai/shared": "workspace:*",
+    "@wecom/aibot-node-sdk": "1.0.7",
+    "better-sqlite3": "^12.10.0",
+    "nodemailer": "9.1.1"
   },
   "devDependencies": {
-    "esbuild": "^0.28.0",
+    "@types/nodemailer": "^8.0.1",
+    "esbuild": "0.28.1",
     "tsx": "^4.20.5"
   },
   "scripts": {

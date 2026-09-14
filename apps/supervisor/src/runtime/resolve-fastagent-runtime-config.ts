@@ -1,4 +1,4 @@
-import type { UserLlmProfileRepository } from '@weclaws/db';
+import type { UserLlmProfileRepository } from '@weiling-ai/db';
 import type { SpawnableBotInstance } from './spawn-fastagent';
 
 export interface ResolvedFastAgentRuntimeConfig {

@@ -12,6 +12,7 @@ export {
 } from './managed-skills-lock';
 export {
   readManagedSkillMarker,
+  readManagedSkillsMetadata,
   resolveManagedSkillsPaths,
   syncManagedSkills,
   type ManagedSkillMarker,

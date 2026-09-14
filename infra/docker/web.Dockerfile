@@ -28,7 +28,7 @@ COPY packages/db packages/db
 COPY packages/shared packages/shared
 COPY resources resources
 
-RUN pnpm --filter @weclaws/web build
+RUN pnpm --filter @weiling-ai/web build
 
 FROM node:20-bookworm-slim AS runtime
 
@@ -49,11 +49,11 @@ COPY --from=build /repo/apps/supervisor/package.json ./apps/supervisor/package.j
 COPY --from=build /repo/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /repo/resources ./resources
 
-RUN mkdir -p /app/storage/sqlite /app/storage/instances
+RUN mkdir -p /app/storage/sqlite /app/storage/instances /app/storage/secrets
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/login', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"
 
-CMD ["node", "apps/web/server.js"]
+CMD ["sh", "-c", "umask 077 && exec node apps/web/server.js"]

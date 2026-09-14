@@ -1,11 +1,63 @@
-# Security
+# 安全政策
 
-## Reporting
+微Link把聊天入口、模型密钥、Bot 登录态、用户工作区和服务端执行环境放在同一套自托管系统里。请先把它当作“可信宿主机上的受控团队工具”，再根据自己的风险级别加固；当前版本不承诺能够抵御拥有宿主机权限的恶意租户。
 
-If you find a security issue, report it privately to `yoking@outlook.com` instead of opening a public issue.
+## 报告安全问题
 
-## Scope
+请不要在公开 Issue 中粘贴密钥、二维码、登录态、数据库或可复现的真实聊天记录。请在仓库的 **Security → Report a vulnerability** 中创建私密安全报告，并尽量包含：
 
-- Do not commit secrets.
-- Do not expose runtime data.
-- Treat environment files and storage directories as sensitive.
+- 受影响的版本、commit 或镜像 digest；
+- 可在脱敏环境中复现的步骤；
+- 影响范围（账号、Bot、工作区、沙箱、通道或管理接口）；
+- 临时缓解办法；
+- 是否已经轮换相关凭据。
+
+维护者会先确认收到，再评估修复、公告和致谢方式。若仓库暂未启用私密报告，请只提交“不含漏洞细节和真实数据”的占位 Issue，请维护者开启私密报告通道。
+
+## 威胁模型与边界
+
+默认假设：
+
+- Docker 宿主机、管理员账号和部署目录是可信的。
+- 用户属于受控团队，管理员负责审核邀请码、模型密钥和通道权限。
+- 远程沙箱降低 Bot 之间的文件和进程互相影响，但不是内核级隔离或对抗恶意租户的完整安全边界。
+
+当前不能承诺：
+
+- `SYS_ADMIN`、`NET_ADMIN`、`seccomp=unconfined` 或 `apparmor=unconfined` 等高权限配置能够安全承载不受信任的任意代码；
+- 模型提供商、聊天平台、浏览器 sidecar 或第三方 Skill 不会记录或泄露数据；
+- SQLite 中的模型密钥、通道 Secret 和运行状态默认已加密；
+- “多用户”自动等价于合规的 SaaS 隔离；
+- 平台侧允许所有主动消息、文件发送、群聊或长期连接在所有账号和区域始终有效。
+
+## 发布前最重要的检查
+
+- `.env`、`infra/compose/.env`、`storage/`、SQLite、Bot 实例目录、Lark 配置、日志和截图不得提交。
+- 所有曾经进入 Git 历史的真实凭据都按已泄露处理并轮换；删除文件本身不等于从历史移除。
+- `BETTER_AUTH_SECRET`、`BROWSERLESS_TOKEN` 和内部 API Token 使用随机高熵值，生产环境不使用 `replace-me`。
+- 沙箱管理端口只在 Compose 内网可见；对外只开放 Web 入口，反向代理负责 TLS 和访问控制。
+- 管理员白名单、邀请码和公开二维码链接按最小权限发放；不用时撤销分享链接和通道绑定。
+- 数据库、实例、沙箱工作区和 `secrets` 目录采用最小文件权限，并纳入加密备份。
+
+## 二维码、聊天和截图脱敏
+
+二维码可能包含一次性登录凭据或账号关联信息；不要上传可扫描的真实二维码。演示图应使用失效的占位二维码，并在发布前用另一台设备确认无法扫码登录。
+
+截图、GIF 和日志应清除：真实聊天内容、手机号、邮箱、客户名、内部域名、服务器 IP、Cookie、Token、模型 Key、工作区绝对路径、文件名和企业应用 ID。公开演示建议使用专门的测试账号、短期密钥和空白工作区。
+
+## 沙箱加固建议
+
+1. 使用独立虚拟机或专用主机，限制宿主机上其他服务和 Docker socket 的访问。
+2. 只开放必要的出站域名和端口；浏览器、模型网关和聊天平台按实际需求配置。
+3. 删除不需要的 Linux capability，固定基础镜像和 npm/系统包版本，并扫描镜像漏洞。
+4. 对高风险或不受信任的代码执行使用 gVisor、Kata Containers 或其他经评估的隔离方案。
+5. 不把 `/var/run/docker.sock`、宿主机根目录、SSH 密钥、云凭据或整个工作区挂进沙箱。
+6. 定期查看容器日志、磁盘空间、异常出站连接、重启次数和投递失败记录。
+
+## 数据留存
+
+微Link的数据库、实例工作区、沙箱工作区、通道配置和日志都可能包含业务数据。部署者需要自行定义留存周期、备份加密、访问审批和删除流程；参见 [备份与恢复](docs/operations/backup-and-restore.md)。
+
+## 第三方依赖
+
+FastAgent、sandbox-runtime、Browserless、Lark CLI、企业微信 SDK、托管 Skills 和模型提供商各自有安全与隐私边界，见 [第三方许可说明](THIRD_PARTY_NOTICES.md)。不要因为某个依赖通过 npm 或 Docker 获取，就把它当成经过本项目安全审计的组件。

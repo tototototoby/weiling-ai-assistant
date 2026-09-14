@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="720" viewBox="0 0 1500 720" role="img">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF8FC"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD0CD"/><stop offset="1" stop-color="#F7A5A2"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6EDFA"/><stop offset="1" stop-color="#9EDAF4"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#5C9DB8" flood-opacity="0.18"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="28"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#A7C7D0"/></marker>
+  </defs>
+
+  <rect width="1500" height="720" rx="32" fill="#F9FCFD"/>
+  <text x="72" y="82" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="38" font-weight="800" fill="#19323C">一条语音，到工位拿回一张海报</text>
+  <text x="72" y="120" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="19" fill="#56717A">用户离开电脑，服务端仍在独立沙箱中完成工作</text>
+  <g><rect x="72" y="256" width="230" height="134" rx="24" fill="#FFFFFF" stroke="#D9E9ED"/><rect x="72" y="256" width="7" height="134" rx="4" fill="#FCABA7"/><text x="102" y="300" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="750" fill="#19323C">① 发条语音</text><text x="102" y="334" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="16" fill="#56717A">说清目标、主题和时间</text></g>
+  <g><rect x="370" y="256" width="230" height="134" rx="24" fill="#FFFFFF" stroke="#D9E9ED"/><rect x="370" y="256" width="7" height="134" rx="4" fill="#77C9EC"/><text x="400" y="300" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="750" fill="#19323C">② 理解任务</text><text x="400" y="334" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="16" fill="#56717A">识别意图并补齐必要信息</text></g>
+  <g><rect x="668" y="256" width="230" height="134" rx="24" fill="#FFFFFF" stroke="#D9E9ED"/><rect x="668" y="256" width="7" height="134" rx="4" fill="#81D1B2"/><text x="698" y="300" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="750" fill="#19323C">③ 调用技能</text><text x="698" y="334" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="16" fill="#56717A">选择海报与办公文件能力</text></g>
+  <g><rect x="966" y="256" width="230" height="134" rx="24" fill="#FFFFFF" stroke="#D9E9ED"/><rect x="966" y="256" width="7" height="134" rx="4" fill="#77C9EC"/><text x="996" y="300" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="750" fill="#19323C">④ 沙箱执行</text><text x="996" y="334" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="16" fill="#56717A">素材处理、排版与导出</text></g>
+  <g><rect x="1264" y="256" width="166" height="134" rx="24" fill="#FFFFFF" stroke="#D9E9ED"/><rect x="1264" y="256" width="7" height="134" rx="4" fill="#FCABA7"/><text x="1294" y="300" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="22" font-weight="750" fill="#19323C">⑤ 发回成果</text><text x="1294" y="334" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="16" fill="#56717A">直接查看或下载</text></g>
+  <path d="M302 323 L370 323" stroke="#A7C7D0" stroke-width="3" marker-end="url(#arrow)"/><path d="M600 323 L668 323" stroke="#A7C7D0" stroke-width="3" marker-end="url(#arrow)"/><path d="M898 323 L966 323" stroke="#A7C7D0" stroke-width="3" marker-end="url(#arrow)"/><path d="M1196 323 L1264 323" stroke="#A7C7D0" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="72" y="492" width="1358" height="92" rx="24" fill="#E7F5F8"/>
+  <text x="105" y="530" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="18" font-weight="700" fill="#19323C">核心差异</text>
+  <text x="105" y="561" font-family="'Microsoft YaHei','Noto Sans CJK SC','PingFang SC',Arial,sans-serif" font-size="17" fill="#56717A">技能已经预配置；任务不依赖用户工作电脑保持开机；每个用户拥有独立工作区。</text>
+</svg>

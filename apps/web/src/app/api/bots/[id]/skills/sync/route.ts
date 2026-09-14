@@ -6,7 +6,7 @@ import { requireOwnedBot, requireRequestSession } from '@/lib/session';
 import {
   resolveManagedSkillsBundleRoot,
   syncManagedSkills,
-} from '@weclaws/shared/managed-skills';
+} from '@weiling-ai/shared/managed-skills';
 
 const SyncSkillsRequestSchema = z.object({
   operation: z.enum([

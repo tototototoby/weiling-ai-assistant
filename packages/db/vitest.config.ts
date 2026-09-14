@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: {
-      '@weclaws/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
+      '@weiling-ai/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
     },
   },
 });

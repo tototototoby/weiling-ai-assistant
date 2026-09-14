@@ -3,6 +3,8 @@ import { BrandLockup } from './brand-lockup';
 import { LanguageSwitcher } from './language-switcher';
 
 interface AuthShellProps {
+  brandImageUrl?: string | null;
+  brandLabel?: string;
   children: ReactNode;
   eyebrow: string;
   footer: ReactNode;
@@ -14,6 +16,8 @@ interface AuthShellProps {
 }
 
 export function AuthShell({
+  brandImageUrl,
+  brandLabel,
   children,
   eyebrow,
   footer,
@@ -23,6 +27,8 @@ export function AuthShell({
   subtitle,
   title,
 }: AuthShellProps) {
+  const hasCustomBrand = Boolean(brandImageUrl || brandLabel);
+
   return (
     <section className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 lg:px-6 lg:py-10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,var(--auth-glow-left),transparent_44%),radial-gradient(circle_at_top_right,var(--auth-glow-right),transparent_32%),linear-gradient(180deg,var(--auth-overlay-start),var(--auth-overlay-middle)_48%,var(--auth-overlay-end)_100%)]" />
@@ -33,7 +39,13 @@ export function AuthShell({
         <div className="hidden items-center lg:flex">
           <div className="grid max-w-[46rem] gap-8 px-3" data-auth-hero-content="">
             <div data-auth-hero-brand="">
-              <BrandLockup variant="hero" />
+              <BrandLockup
+                frameClassName={hasCustomBrand ? 'h-[4.5rem] w-[4.5rem] rounded-[1rem]' : undefined}
+                imageUrl={brandImageUrl}
+                label={brandLabel}
+                labelClassName={hasCustomBrand ? 'text-2xl font-bold normal-case tracking-normal text-foreground' : undefined}
+                variant="hero"
+              />
             </div>
             <div className="grid gap-6">
               <h2
@@ -70,7 +82,13 @@ export function AuthShell({
             <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,var(--panel-highlight),transparent)]" />
             <div className="relative mb-8 grid gap-4">
               <div className="lg:hidden">
-                <BrandLockup variant="compact" />
+                <BrandLockup
+                  frameClassName={hasCustomBrand ? 'h-14 w-14 rounded-[0.875rem]' : undefined}
+                  imageUrl={brandImageUrl}
+                  label={brandLabel}
+                  labelClassName={hasCustomBrand ? 'text-base font-bold normal-case tracking-normal text-foreground' : undefined}
+                  variant="compact"
+                />
               </div>
               <div className="grid gap-3">
                 <p className="m-0 text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--text-soft)]">

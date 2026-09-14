@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BOT_STATUSES } from '@weclaws/shared';
+import { BOT_STATUSES } from '@weiling-ai/shared';
 import { EmptyState } from '@/components/layout/empty-state';
 import { useLocale } from '@/components/providers/locale-provider';
 import { Button } from '@/components/ui/button';

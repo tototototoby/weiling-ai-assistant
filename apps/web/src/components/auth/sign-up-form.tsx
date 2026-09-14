@@ -68,7 +68,7 @@ export function SignUpForm() {
           return;
         }
 
-        router.push('/bots');
+        router.push('/');
         router.refresh();
       } catch {
         setErrorMessage(t((messages) => messages.auth.signUpFailed));

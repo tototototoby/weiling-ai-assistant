@@ -1,7 +1,7 @@
 import {
   MAX_CONSECUTIVE_RESTARTS,
   RESTART_BACKOFF_DELAYS_MS,
-} from '@weclaws/shared';
+} from '@weiling-ai/shared';
 
 export interface RestartPlanRestart {
   kind: 'restart';
@@ -17,10 +17,28 @@ export interface RestartPlanFailed {
 
 export type RestartPlan = RestartPlanRestart | RestartPlanFailed;
 
-export function calculateRestartPlan(currentRestartCount: number, observedAt: Date): RestartPlan {
+export interface RestartPlanOptions {
+  keepRetryingAfterThreshold?: boolean;
+}
+
+export function calculateRestartPlan(
+  currentRestartCount: number,
+  observedAt: Date,
+  options: RestartPlanOptions = {},
+): RestartPlan {
   const nextRestartCount = currentRestartCount + 1;
 
   if (nextRestartCount >= MAX_CONSECUTIVE_RESTARTS) {
+    if (options.keepRetryingAfterThreshold) {
+      return {
+        kind: 'restart',
+        restartBackoffUntil: new Date(
+          observedAt.getTime() + RESTART_BACKOFF_DELAYS_MS[RESTART_BACKOFF_DELAYS_MS.length - 1],
+        ),
+        restartCount: MAX_CONSECUTIVE_RESTARTS - 1,
+      };
+    }
+
     return {
       kind: 'failed',
       restartBackoffUntil: null,

@@ -1,0 +1,7 @@
+interface:
+  display_name: "企业邮箱"
+  short_description: "为每个独立员工安全查询、起草、发送和管理腾讯企业邮件"
+  default_prompt: "使用 $enterprise-mail 查询当前员工的企业邮箱，并在发送前展示完整预览和取得确认。"
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "微Link海报"
+  short_description: "将文案制作成蓝红品牌配色的固定尺寸海报 PNG"
+  default_prompt: "使用 $poster-design 将用户提供的主题和文案排版为清爽的微Link品牌海报，并生成指定比例 PNG。"
+
+policy:
+  allow_implicit_invocation: true

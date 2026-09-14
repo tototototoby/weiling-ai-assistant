@@ -1,4 +1,4 @@
-const DEFAULT_POOL_SIZE = 3;
+const DEFAULT_POOL_SIZE = 1;
 const DEFAULT_MIN_READY_PROCESSES = 1;
 const DEFAULT_SESSION_TIMEOUT_MS = 600_000;
 const DEFAULT_MAX_CONCURRENT_INIT = 1;
@@ -45,8 +45,8 @@ const FATAL_LINUX_DENY_READ_PATHS = new Set([
   '/etc/mtab',
 ]);
 
-export const SRT_POOL_CONFIG_FILE_VERSION = 1;
-export const SRT_POOL_STATUS_FILE_VERSION = 1;
+export const SRT_POOL_CONFIG_FILE_VERSION = 2;
+export const SRT_POOL_STATUS_FILE_VERSION = 2;
 
 export type SandboxRuntimePoolState = 'starting' | 'running' | 'degraded' | 'stopped' | 'failed';
 

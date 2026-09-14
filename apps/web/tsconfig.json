@@ -4,9 +4,9 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "paths": {
       "@/*": ["./src/*"],
-      "@weclaws/db": ["../../packages/db/src/index.ts"],
-      "@weclaws/shared": ["../../packages/shared/src/index.ts"],
-      "@weclaws/shared/managed-skills": ["../../packages/shared/src/managed-skills/index.ts"]
+      "@weiling-ai/db": ["../../packages/db/src/index.ts"],
+      "@weiling-ai/shared": ["../../packages/shared/src/index.ts"],
+      "@weiling-ai/shared/managed-skills": ["../../packages/shared/src/managed-skills/index.ts"]
     },
     "types": ["node", "vitest/globals"],
     "jsx": "preserve",

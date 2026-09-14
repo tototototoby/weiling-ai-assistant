@@ -60,6 +60,10 @@ export class UserLlmProfileRepository {
     return row ?? null;
   }
 
+  async findById(id: string) {
+    return this.db.select().from(userLlmProfiles).where(eq(userLlmProfiles.id, id)).get() ?? null;
+  }
+
   async updateByIdForUser(id: string, userId: string, input: UpdateUserLlmProfileInput) {
     this.db.update(userLlmProfiles)
       .set({

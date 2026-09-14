@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { parseSandboxRuntimePoolDefaults } from '@weclaws/shared';
+import { parseSandboxRuntimePoolDefaults } from '@weiling-ai/shared';
 import type { SupervisorConfig } from '../../config';
 import { createFastAgentWorkspaceId } from '../sandbox-workspace-map';
 import {
@@ -60,7 +60,12 @@ describe('createFastAgentSpawnSpec', () => {
       IM_GATEWAY_WORKSPACE_DIR: join(dir, 'bot_1', 'workspace'),
       SANDBOX_API_KEY: 'pool-key',
       SANDBOX_URL: 'http://sandbox-runtime:31000',
+      WECLAWS_BOT_INSTANCE_ID: 'bot_1',
+      WECLAWS_DATABASE_URL: `file:${join(dir, 'test.sqlite')}`,
+      WECLAWS_INTERNAL_API_TOKEN: '',
+      WECLAWS_INTERNAL_URL: 'http://127.0.0.1:8790',
     });
+    expect(spec.env.WECLAWS_OPENCODE_SESSION_ID).toBeUndefined();
   });
 
   it('omits sandbox args and env when sandbox mode is disabled', async () => {
@@ -212,6 +217,46 @@ describe('createFastAgentSpawnSpec', () => {
     }
   });
 
+  it('injects only enabled knowledge runtime configs supplied by the supervisor', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-spawn-spec-dify-'));
+    tempDirs.push(dir);
+    const fastagentBinaryPath = join(dir, 'fastagent');
+    await writeFile(fastagentBinaryPath, '#!/bin/sh\nexit 0\n');
+    await chmod(fastagentBinaryPath, 0o755);
+
+    const spec = await createFastAgentSpawnSpec({
+      botInstance: createBotInstanceFixture(dir, fastagentBinaryPath),
+      config: createConfigFixture(dir, fastagentBinaryPath),
+      difyConfig: {
+        apiBaseUrl: 'http://dify.internal/v1',
+        apiKey: 'app-secret',
+        appName: '公司知识库',
+        revision: 7,
+      },
+      ragflowConfig: {
+        apiBaseUrl: 'http://ragflow.internal',
+        apiKey: 'ragflow-secret',
+        datasetIds: ['dataset_1', 'dataset_2'],
+        knowledgeBaseName: 'RAGFlow 公司知识库',
+        revision: 3,
+      },
+      runtimeConfig: createRuntimeConfigFixture(),
+      sandboxRuntimePool: createSandboxRuntimePoolFixture(dir),
+    });
+
+    expect(spec.env).toMatchObject({
+      DIFY_API_BASE_URL: 'http://dify.internal/v1',
+      DIFY_API_KEY: 'app-secret',
+      DIFY_APP_NAME: '公司知识库',
+      DIFY_CONFIG_REVISION: '7',
+      RAGFLOW_API_BASE_URL: 'http://ragflow.internal',
+      RAGFLOW_API_KEY: 'ragflow-secret',
+      RAGFLOW_CONFIG_REVISION: '3',
+      RAGFLOW_DATASET_IDS_JSON: '["dataset_1","dataset_2"]',
+      RAGFLOW_KNOWLEDGE_BASE_NAME: 'RAGFlow 公司知识库',
+    });
+  });
+
   it('preserves lowercase proxy env vars that are commonly used in container and CI environments', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-spawn-spec-lowercase-proxy-'));
     tempDirs.push(dir);
@@ -265,7 +310,9 @@ describe('createFastAgentSpawnSpec', () => {
     })).rejects.toThrow(`FastAgent binary not found: ${fastagentBinaryPath}`);
   });
 
-  it('throws when the configured real FastAgent binary is not executable', async () => {
+  it.skipIf(process.platform === 'win32')(
+    'throws when the configured real FastAgent binary is not executable',
+    async () => {
     const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-spawn-not-executable-'));
     tempDirs.push(dir);
 
@@ -279,7 +326,8 @@ describe('createFastAgentSpawnSpec', () => {
       runtimeConfig: createRuntimeConfigFixture(),
       sandboxRuntimePool: createSandboxRuntimePoolFixture(dir),
     })).rejects.toThrow(`FastAgent binary is not executable: ${fastagentBinaryPath}`);
-  });
+    },
+  );
 
   it('keeps the mock fixture path available for explicit test-only scenarios', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-spawn-mock-'));
@@ -308,6 +356,49 @@ describe('createFastAgentSpawnSpec', () => {
       MOCK_FASTAGENT_SCENARIO: 'happy',
       MOCK_FASTAGENT_STEP_DELAY_MS: '10',
     });
+  });
+
+  it('injects one stable opencode-go session id per bot instance', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-spawn-opencode-session-'));
+    tempDirs.push(dir);
+
+    const fastagentBinaryPath = join(dir, 'fastagent');
+    await writeFile(fastagentBinaryPath, '#!/bin/sh\nexit 0\n');
+    await chmod(fastagentBinaryPath, 0o755);
+
+    const openCodeRuntime = {
+      ...createRuntimeConfigFixture(),
+      apiType: 'openai-responses',
+      baseUrl: 'https://opencode.ai/zen/go/v1',
+      model: 'deepseek-v4-flash',
+      provider: 'opencode-go',
+    };
+
+    const first = await createFastAgentSpawnSpec({
+      botInstance: createBotInstanceFixture(dir, fastagentBinaryPath),
+      config: createConfigFixture(dir, fastagentBinaryPath),
+      runtimeConfig: openCodeRuntime,
+      sandboxRuntimePool: createSandboxRuntimePoolFixture(dir),
+    });
+    const second = await createFastAgentSpawnSpec({
+      botInstance: createBotInstanceFixture(dir, fastagentBinaryPath),
+      config: createConfigFixture(dir, fastagentBinaryPath),
+      runtimeConfig: openCodeRuntime,
+      sandboxRuntimePool: createSandboxRuntimePoolFixture(dir),
+    });
+
+    expect(first.env.WECLAWS_OPENCODE_SESSION_ID).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(second.env.WECLAWS_OPENCODE_SESSION_ID).toBe(first.env.WECLAWS_OPENCODE_SESSION_ID);
+
+    const otherBot = await createFastAgentSpawnSpec({
+      botInstance: { ...createBotInstanceFixture(dir, fastagentBinaryPath), id: 'bot_2' },
+      config: createConfigFixture(dir, fastagentBinaryPath),
+      runtimeConfig: openCodeRuntime,
+      sandboxRuntimePool: createSandboxRuntimePoolFixture(dir),
+    });
+    expect(otherBot.env.WECLAWS_OPENCODE_SESSION_ID).not.toBe(first.env.WECLAWS_OPENCODE_SESSION_ID);
   });
 });
 
@@ -351,6 +442,7 @@ function createConfigFixture(
       new URL('../../../../../tests/fixtures/mock-fastagent.ts', import.meta.url),
     ),
     reconcileIntervalMs: 50,
+    reconcileStallTimeoutMs: 120_000,
     sandboxMode: 'remote',
     sandboxApiKey: null,
     sandboxUrl: null,
@@ -360,6 +452,10 @@ function createConfigFixture(
     srtServiceHost: 'sandbox-runtime',
     srtWorkspaceMapDir: join(dir, '.sandbox-runtime', 'workspace-map'),
     workspaceRoot: dir,
+    internalApiToken: overrides.internalApiToken ?? '',
+    internalPort: overrides.internalPort ?? 8790,
+    larkConfigRoot: overrides.larkConfigRoot ?? join(dir, 'lark'),
+    larkCliPath: overrides.larkCliPath ?? 'lark-cli',
     ...overrides,
   };
 }

@@ -73,6 +73,24 @@ vi.mock('@/components/bots/bot-detail-live-view', () => ({
   BotDetailLiveView: () => <div>live-view</div>,
 }));
 
+vi.mock('@/components/providers/locale-provider', () => ({
+  useLocale: () => ({
+    locale: 'en',
+    messages: {
+      webChat: {
+        description: 'Chat with your assistant',
+        title: 'Web Chat',
+      },
+    },
+    t: (selector: (messages: never) => unknown) => selector({
+      webChat: {
+        description: 'Chat with your assistant',
+        title: 'Web Chat',
+      },
+    } as never),
+  }),
+}));
+
 describe('BotDetailPage', () => {
   it('right aligns the back-to-bots action', async () => {
     const { default: BotDetailPage } = await import('../page');

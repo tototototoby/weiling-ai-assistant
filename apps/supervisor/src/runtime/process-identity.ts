@@ -18,8 +18,31 @@ export function isProcessAlive(pid: number) {
 }
 
 export async function getProcessStartedAt(pid: number) {
+  if (process.platform === 'win32') {
+    return getWindowsProcessStartedAt(pid);
+  }
+
   try {
     const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'lstart=']);
+    return parseProcessStartedAt(stdout);
+  } catch {
+    return null;
+  }
+}
+
+async function getWindowsProcessStartedAt(pid: number) {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return null;
+  }
+
+  try {
+    const { stdout } = await execFile('powershell.exe', [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`,
+    ]);
     return parseProcessStartedAt(stdout);
   } catch {
     return null;

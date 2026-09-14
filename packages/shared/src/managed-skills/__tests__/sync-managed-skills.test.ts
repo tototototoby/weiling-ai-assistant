@@ -20,6 +20,82 @@ afterEach(async () => {
 });
 
 describe('syncManagedSkills', () => {
+  it('installs only explicitly enabled managed skills', async () => {
+    const harness = await createHarness({
+      skills: {
+        alpha: { 'SKILL.md': '# Alpha' },
+        beta: { 'SKILL.md': '# Beta' },
+      },
+      version: 'bundle-v1',
+    });
+
+    const result = await syncManagedSkills({
+      botInstanceId: harness.botInstanceId,
+      bundleRoot: harness.bundleRoot,
+      enabledSkillNames: ['beta'],
+      instancesRoot: harness.instancesRoot,
+      operation: { type: 'sync-all-managed' },
+    });
+
+    expect(result).toMatchObject({
+      installedSkills: ['beta'],
+      status: 'success',
+    });
+    await expect(pathExists(path.join(
+      resolveManagedSkillsPaths(harness.instancesRoot, harness.botInstanceId).skillsDir,
+      'alpha',
+    ))).resolves.toBe(false);
+    await expect(readSkillFile(
+      harness.instancesRoot,
+      harness.botInstanceId,
+      'beta',
+      'SKILL.md',
+    )).resolves.toBe('# Beta');
+    await expectManagedSkills(harness.instancesRoot, harness.botInstanceId, ['beta']);
+  });
+
+  it('removes newly disabled managed skills without touching user-owned skills', async () => {
+    const harness = await createHarness({
+      skills: {
+        alpha: { 'SKILL.md': '# Alpha managed' },
+        beta: { 'SKILL.md': '# Beta managed' },
+      },
+      version: 'bundle-v1',
+    });
+    const managedPaths = resolveManagedSkillsPaths(harness.instancesRoot, harness.botInstanceId);
+
+    await syncManagedSkills({
+      botInstanceId: harness.botInstanceId,
+      bundleRoot: harness.bundleRoot,
+      instancesRoot: harness.instancesRoot,
+      operation: { type: 'sync-all-managed' },
+    });
+    await mkdir(path.join(managedPaths.skillsDir, 'user-only'), { recursive: true });
+    await writeFile(path.join(managedPaths.skillsDir, 'user-only', 'SKILL.md'), '# User');
+
+    const result = await syncManagedSkills({
+      botInstanceId: harness.botInstanceId,
+      bundleRoot: harness.bundleRoot,
+      enabledSkillNames: ['beta'],
+      instancesRoot: harness.instancesRoot,
+      operation: { type: 'sync-all-managed' },
+    });
+
+    expect(result).toMatchObject({
+      removedSkills: ['alpha'],
+      status: 'success',
+      updatedSkills: ['beta'],
+    });
+    await expect(pathExists(path.join(managedPaths.skillsDir, 'alpha'))).resolves.toBe(false);
+    await expect(readSkillFile(
+      harness.instancesRoot,
+      harness.botInstanceId,
+      'user-only',
+      'SKILL.md',
+    )).resolves.toBe('# User');
+    await expectManagedSkills(harness.instancesRoot, harness.botInstanceId, ['beta']);
+  });
+
   it('installs all managed skills into an empty target directory and writes metadata', async () => {
     const harness = await createHarness({
       skills: {
@@ -530,7 +606,7 @@ interface HarnessInput {
 }
 
 async function createHarness(input: HarnessInput) {
-  const root = await mkdtemp(path.join(tmpdir(), 'weclaws-managed-skills-'));
+  const root = await mkdtemp(path.join(tmpdir(), 'weiling-managed-skills-'));
   const instancesRoot = path.join(root, 'instances');
   const bundleRoot = path.join(root, 'bundle');
   const botInstanceId = 'bot_1';

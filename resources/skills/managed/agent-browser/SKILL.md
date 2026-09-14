@@ -5,7 +5,7 @@ description: Use when the user needs browser automation for websites, web apps, 
 
 # agent-browser
 
-Browser automation CLI for AI agents. In WeClaws, browser automation is remote-only: the only supported runtime paths are `agent-browser -p browserless` and explicit remote `--cdp` connections, so the real browser runs in a remote backend instead of inside the nested sandbox or on the host.
+Browser automation CLI for AI agents. In weiling, browser automation is remote-only: the only supported runtime paths are `agent-browser -p browserless` and explicit remote `--cdp` connections, so the real browser runs in a remote backend instead of inside the nested sandbox or on the host.
 
 ## Loading Skills
 
@@ -28,20 +28,21 @@ agent-browser skills get <name> --full    # Include references and templates
 - **vercel-sandbox** — Browser automation in Vercel Sandbox
 - **agentcore** — Browser automation on AWS Bedrock AgentCore
 
-## WeClaws Runtime Path
+## weiling Runtime Path
 
 Primary path in the default Compose deployment:
 
 ```bash
-export BROWSERLESS_API_URL="http://browserless:3000"
-export BROWSERLESS_API_KEY="your-browserless-token"
-agent-browser -p browserless open https://example.com
+export BROWSERLESS_API_KEY="$BROWSERLESS_API_KEY"
+agent-browser connect "ws://browserless:3000/chromium?token=$BROWSERLESS_API_KEY"
+agent-browser open https://example.com
 ```
 
 Alternative supported path for direct CDP debugging:
 
 ```bash
-agent-browser --cdp "ws://browserless:3000/chromium?token=your-browserless-token" open https://example.com
+agent-browser connect "ws://browserless:3000/chromium?token=your-browserless-token"
+agent-browser open https://example.com
 ```
 
 ## Browserless Direct
@@ -65,7 +66,7 @@ Decision guide:
 ## Remote-Only Rules
 
 - Always connect to a remote browser backend via `-p browserless` or an explicit remote `--cdp` endpoint.
-- Never launch a local browser inside `sandbox-runtime`, inside the nested sandbox, or on the host for WeClaws browser automation flows.
+- Never launch a local browser inside `sandbox-runtime`, inside the nested sandbox, or on the host for weiling browser automation flows.
 - Never treat missing Browserless/CDP connectivity as a reason to fall back to local browser startup or local browser installation.
 - If `BROWSERLESS_API_URL`, `BROWSERLESS_API_KEY`, or the remote CDP endpoint is missing or broken, stop and report the browser task as blocked.
 
@@ -73,7 +74,7 @@ Notes:
 
 - `sandbox-runtime` keeps the `agent-browser` client and file outputs.
 - `browserless` or another remote CDP backend owns the real browser process in every supported path.
-- WeClaws does not support local browser launch or local browser install as a fallback; use Browserless or direct remote CDP only.
+- weiling does not support local browser launch or local browser install as a fallback; use Browserless or direct remote CDP only.
 - Screenshots, downloads, PDFs, and extracted files still land in the bot-accessible filesystem inside the sandbox workspace.
 
 ## Why agent-browser

@@ -26,4 +26,16 @@ describe('calculateRestartPlan', () => {
       restartCount: 4,
     });
   });
+
+  it('keeps transient network failures recoverable with a capped retry rate', () => {
+    const now = new Date('2026-03-30T00:00:00.000Z');
+
+    expect(calculateRestartPlan(3, now, {
+      keepRetryingAfterThreshold: true,
+    })).toEqual({
+      kind: 'restart',
+      restartBackoffUntil: new Date('2026-03-30T00:01:00.000Z'),
+      restartCount: 3,
+    });
+  });
 });

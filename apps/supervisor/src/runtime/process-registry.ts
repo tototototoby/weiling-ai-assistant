@@ -4,6 +4,10 @@ export interface ManagedProcessEntry {
   applyChain: Promise<void>;
   botInstanceId: string;
   child: ChildProcess;
+  fatalRuntimeFailureHandled: boolean;
+  forceKillTimer: ReturnType<typeof setTimeout> | null;
+  terminalStoppedHandled: boolean;
+  terminationRequested: boolean;
 }
 
 export class ProcessRegistry {
@@ -15,6 +19,14 @@ export class ProcessRegistry {
 
   delete(botInstanceId: string) {
     this.entries.delete(botInstanceId);
+  }
+
+  deleteIfCurrent(entry: ManagedProcessEntry) {
+    if (this.entries.get(entry.botInstanceId) !== entry) {
+      return false;
+    }
+
+    return this.entries.delete(entry.botInstanceId);
   }
 
   get(botInstanceId: string) {

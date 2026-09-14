@@ -53,3 +53,15 @@ export function fail(error: unknown): Response {
     { status: normalized.status },
   );
 }
+
+export async function readJsonBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    throw new ApiError({
+      code: 'INVALID_JSON_BODY',
+      message: 'Request body must be valid JSON.',
+      status: 400,
+    });
+  }
+}

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState, useTransition } from 'react';
-import { Activity, Cpu, KeyRound, MemoryStick, PencilLine, Power, RotateCw, Save } from 'lucide-react';
+import { Activity, Cpu, MemoryStick, PencilLine, Power, RotateCw, Save } from 'lucide-react';
 import { SectionCard } from '@/components/layout/section-card';
 import { useLocale } from '@/components/providers/locale-provider';
 import { Badge } from '@/components/ui/badge';
@@ -39,9 +39,6 @@ interface PoolEditorState {
   maxConcurrentInit: string;
   minReadyProcesses: string;
   poolSize: string;
-  port: string;
-  portRangeEnd: string;
-  portRangeStart: string;
   sessionTimeoutMs: string;
 }
 
@@ -49,12 +46,11 @@ type FieldName = keyof Omit<PoolEditorState, 'enabled'>;
 type FieldErrors = Partial<Record<FieldName, string>>;
 interface ValidationMessages {
   minReadyProcessesExceedsPoolSize: string;
-  portRangeStartExceedsEnd: string;
   positiveInteger: string;
 }
 
 type PendingAction = {
-  ownerUserId: string;
+  botInstanceId: string;
   type: 'restart' | 'save' | 'toggle';
 } | null;
 
@@ -64,62 +60,91 @@ const EDITABLE_FIELD_NAMES: readonly FieldName[] = [
   'maxConcurrentInit',
   'healthCheckIntervalMs',
   'sessionTimeoutMs',
-  'port',
-  'portRangeStart',
-  'portRangeEnd',
 ];
 
 export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeConsoleProps) {
   const { locale, t } = useLocale();
   const [data, setData] = useState(initialData);
-  const [editors, setEditors] = useState(() => createEditorStateByOwner(initialData.pools));
+  const [editors, setEditors] = useState(() => createEditorStateByBot(initialData.pools));
   const [fieldErrors, setFieldErrors] = useState<Record<string, FieldErrors>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [editingOwnerUserId, setEditingOwnerUserId] = useState<string | null>(null);
+  const [editingBotInstanceId, setEditingBotInstanceId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const unavailableLabel = t((messages) => messages.adminSandboxRuntime.unavailable);
   const editLabel = t((messages) => messages.adminSandboxRuntime.editPool);
   const validationMessages: ValidationMessages = {
     minReadyProcessesExceedsPoolSize: t((messages) => messages.adminSandboxRuntime.minReadyProcessesExceedsPoolSize),
-    portRangeStartExceedsEnd: t((messages) => messages.adminSandboxRuntime.portRangeStartExceedsEnd),
     positiveInteger: t((messages) => messages.adminSandboxRuntime.positiveInteger),
   };
-  const selectedPool = editingOwnerUserId
-    ? data.pools.find((pool) => pool.ownerUserId === editingOwnerUserId) ?? null
+  const selectedPool = editingBotInstanceId
+    ? data.pools.find((pool) => pool.botInstanceId === editingBotInstanceId) ?? null
     : null;
-  const selectedEditor = selectedPool ? editors[selectedPool.ownerUserId] : null;
-  const selectedFieldErrors = selectedPool ? (fieldErrors[selectedPool.ownerUserId] ?? {}) : {};
-  const selectedOwnerLabel = selectedPool ? selectedPool.ownerEmail ?? selectedPool.ownerUserId : '';
+  const selectedEditor = selectedPool ? editors[selectedPool.botInstanceId] : null;
+  const selectedFieldErrors = selectedPool ? (fieldErrors[selectedPool.botInstanceId] ?? {}) : {};
+  const selectedBotLabel = selectedPool ? selectedPool.botName ?? selectedPool.botInstanceId : '';
 
   useEffect(() => {
     setData(initialData);
-    setEditors(createEditorStateByOwner(initialData.pools));
+    setEditors(createEditorStateByBot(initialData.pools));
     setFieldErrors({});
   }, [initialData]);
 
-  const updateEditor = (ownerUserId: string, patch: Partial<PoolEditorState>) => {
+  // Runtime status is written by the supervisor independently of the page
+  // request. Poll it while this console is open so CPU/memory values do not
+  // remain stuck at the initial "unavailable" sample.
+  useEffect(() => {
+    let disposed = false;
+    const refresh = async () => {
+      try {
+        const response = await fetch('/api/admin/sandbox-runtime/pools');
+        const payload = await response.json() as ApiResponse<AdminSandboxRuntimePoolsPayload>;
+        if (!disposed && response.ok && payload.data && Array.isArray(payload.data.pools)) {
+          const refreshedData = payload.data;
+          setData(refreshedData);
+          setEditors((currentEditors) => {
+            const nextEditors = { ...currentEditors };
+            for (const pool of refreshedData.pools) {
+              if (!nextEditors[pool.botInstanceId]) {
+                nextEditors[pool.botInstanceId] = toEditorState(pool);
+              }
+            }
+            return nextEditors;
+          });
+        }
+      } catch {
+        // A transient status read failure should not interrupt editing.
+      }
+    };
+    const timer = setInterval(() => void refresh(), 2_500);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const updateEditor = (botInstanceId: string, patch: Partial<PoolEditorState>) => {
     setEditors((currentEditors) => ({
       ...currentEditors,
-      [ownerUserId]: {
-        ...currentEditors[ownerUserId],
+      [botInstanceId]: {
+        ...currentEditors[botInstanceId],
         ...patch,
       },
     }));
     setFieldErrors((currentErrors) => ({
       ...currentErrors,
-      [ownerUserId]: {
-        ...currentErrors[ownerUserId],
+      [botInstanceId]: {
+        ...currentErrors[botInstanceId],
         ...clearPatchedFieldErrors(patch),
       },
     }));
   };
 
-  const mergePool = (ownerUserId: string, patch: Partial<AdminSandboxRuntimePoolItem>) => {
+  const mergePool = (botInstanceId: string, patch: Partial<AdminSandboxRuntimePoolItem>) => {
     setData((currentData) => ({
       ...currentData,
       pools: currentData.pools.map((pool) => (
-        pool.ownerUserId === ownerUserId
+        pool.botInstanceId === botInstanceId
           ? {
             ...pool,
             ...patch,
@@ -131,31 +156,31 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
     }));
   };
 
-  const openEditor = (ownerUserId: string) => {
-    setEditingOwnerUserId(ownerUserId);
+  const openEditor = (botInstanceId: string) => {
+    setEditingBotInstanceId(botInstanceId);
     setErrorMessage(null);
     setFieldErrors((currentErrors) => ({
       ...currentErrors,
-      [ownerUserId]: {},
+      [botInstanceId]: {},
     }));
   };
 
   const closeEditor = () => {
-    setEditingOwnerUserId(null);
+    setEditingBotInstanceId(null);
     setErrorMessage(null);
   };
 
-  const handleRestart = (ownerUserId: string) => {
+  const handleRestart = (botInstanceId: string) => {
     setErrorMessage(null);
-    setPendingAction({ ownerUserId, type: 'restart' });
+    setPendingAction({ botInstanceId, type: 'restart' });
 
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/admin/sandbox-runtime/pools/${ownerUserId}/restart`, {
+        const response = await fetch(`/api/admin/sandbox-runtime/pools/${botInstanceId}/restart`, {
           method: 'POST',
         });
         const payload = await response.json() as ApiResponse<{
-          ownerUserId: string;
+          botInstanceId: string;
           restartRequestedAt: string | null;
         }>;
 
@@ -164,7 +189,7 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
           return;
         }
 
-        mergePool(ownerUserId, {
+        mergePool(botInstanceId, {
           restartRequestedAt: payload.data.restartRequestedAt,
         });
       } catch {
@@ -176,14 +201,14 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
   };
 
   const handleSave = (pool: AdminSandboxRuntimePoolItem) => {
-    const editor = editors[pool.ownerUserId];
+    const editor = editors[pool.botInstanceId];
     const parsed = parseEditorState(editor, validationMessages);
 
     if (!parsed.success) {
       setErrorMessage(null);
       setFieldErrors((currentErrors) => ({
         ...currentErrors,
-        [pool.ownerUserId]: parsed.fieldErrors,
+        [pool.botInstanceId]: parsed.fieldErrors,
       }));
       return;
     }
@@ -191,13 +216,13 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
     setErrorMessage(null);
     setFieldErrors((currentErrors) => ({
       ...currentErrors,
-      [pool.ownerUserId]: {},
+      [pool.botInstanceId]: {},
     }));
-    setPendingAction({ ownerUserId: pool.ownerUserId, type: 'save' });
+    setPendingAction({ botInstanceId: pool.botInstanceId, type: 'save' });
 
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/admin/sandbox-runtime/pools/${pool.ownerUserId}`, {
+        const response = await fetch(`/api/admin/sandbox-runtime/pools/${pool.botInstanceId}`, {
           body: JSON.stringify(parsed.data),
           headers: {
             'content-type': 'application/json',
@@ -211,15 +236,15 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
           return;
         }
 
-        mergePool(pool.ownerUserId, payload.data);
+        mergePool(pool.botInstanceId, payload.data);
         setEditors((currentEditors) => ({
           ...currentEditors,
-          [pool.ownerUserId]: toEditorState({
+          [pool.botInstanceId]: toEditorState({
             ...pool,
             ...payload.data,
           }),
         }));
-        setEditingOwnerUserId(null);
+        setEditingBotInstanceId(null);
       } catch {
         setErrorMessage(t((messages) => messages.adminSandboxRuntime.commandFailed));
       } finally {
@@ -230,8 +255,8 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
 
   const handleToggle = (pool: AdminSandboxRuntimePoolItem) => {
     const editor = {
-      ...editors[pool.ownerUserId],
-      enabled: !editors[pool.ownerUserId].enabled,
+      ...editors[pool.botInstanceId],
+      enabled: !editors[pool.botInstanceId].enabled,
     };
     const parsed = parseEditorState(editor, validationMessages);
 
@@ -239,7 +264,7 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
       setErrorMessage(null);
       setFieldErrors((currentErrors) => ({
         ...currentErrors,
-        [pool.ownerUserId]: parsed.fieldErrors,
+        [pool.botInstanceId]: parsed.fieldErrors,
       }));
       return;
     }
@@ -247,13 +272,13 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
     setErrorMessage(null);
     setFieldErrors((currentErrors) => ({
       ...currentErrors,
-      [pool.ownerUserId]: {},
+      [pool.botInstanceId]: {},
     }));
-    setPendingAction({ ownerUserId: pool.ownerUserId, type: 'toggle' });
+    setPendingAction({ botInstanceId: pool.botInstanceId, type: 'toggle' });
 
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/admin/sandbox-runtime/pools/${pool.ownerUserId}`, {
+        const response = await fetch(`/api/admin/sandbox-runtime/pools/${pool.botInstanceId}`, {
           body: JSON.stringify(parsed.data),
           headers: {
             'content-type': 'application/json',
@@ -267,10 +292,10 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
           return;
         }
 
-        mergePool(pool.ownerUserId, payload.data);
+        mergePool(pool.botInstanceId, payload.data);
         setEditors((currentEditors) => ({
           ...currentEditors,
-          [pool.ownerUserId]: toEditorState({
+          [pool.botInstanceId]: toEditorState({
             ...pool,
             ...payload.data,
           }),
@@ -331,16 +356,17 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
       >
         {data.pools.map((pool) => {
           const ownerLabel = pool.ownerEmail ?? pool.ownerUserId;
+          const botLabel = pool.botName ?? pool.botInstanceId;
 
           return (
             <article
               className="grid gap-3 rounded-[var(--radius-panel)] border border-[color:var(--border-soft)] bg-[color:var(--surface)] p-4 md:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_auto] md:items-center"
               data-srt-pool-row=""
-              key={pool.ownerUserId}
+              key={pool.botInstanceId}
             >
               <div className="grid gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-base font-semibold text-foreground">{ownerLabel}</strong>
+                  <strong className="text-base font-semibold text-foreground">{botLabel}</strong>
                   <Badge variant={pool.enabled ? 'success' : 'neutral'}>
                     {pool.enabled
                       ? t((messages) => messages.adminSandboxRuntime.enabled)
@@ -349,20 +375,14 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
                   <Badge variant={pool.runtime?.state === 'running' ? 'success' : 'neutral'}>
                     {pool.runtime?.state ?? t((messages) => messages.adminSandboxRuntime.runtimeUnavailable)}
                   </Badge>
-                  {pool.apiKeyConfigured ? (
-                    <Badge variant="outline">
-                      <KeyRound className="mr-1 h-3 w-3" />
-                      {t((messages) => messages.adminSandboxRuntime.apiKeyConfigured)}
-                    </Badge>
-                  ) : null}
                 </div>
-                <span className="text-sm text-muted-foreground">{pool.ownerUserId}</span>
+                <span className="text-sm text-muted-foreground">{ownerLabel} · {pool.botInstanceId}</span>
               </div>
 
               <dl className="grid grid-cols-3 gap-3 text-sm">
                 <PoolMetric
-                  label={t((messages) => messages.adminSandboxRuntime.port)}
-                  value={String(pool.port)}
+                  label={t((messages) => messages.adminSandboxRuntime.poolSize)}
+                  value={String(pool.poolSize)}
                 />
                 <PoolMetric
                   label={t((messages) => messages.adminSandboxRuntime.cpu)}
@@ -377,7 +397,7 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
               <div className="flex justify-end">
                 <Button
                   aria-label={editLabel}
-                  onClick={() => openEditor(pool.ownerUserId)}
+                  onClick={() => openEditor(pool.botInstanceId)}
                   size="sm"
                   type="button"
                   variant="outline"
@@ -400,7 +420,7 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
           <DialogContent>
             <div className="grid gap-2 pr-10">
               <DialogTitle className="text-xl font-semibold text-foreground">
-                {t((messages) => messages.adminSandboxRuntime.editPoolTitle)} {selectedOwnerLabel}
+                {t((messages) => messages.adminSandboxRuntime.editPoolTitle)} {selectedBotLabel}
               </DialogTitle>
               <DialogDescription className="m-0 text-sm leading-6 text-muted-foreground">
                 {t((messages) => messages.adminSandboxRuntime.editPoolDescription)}
@@ -419,16 +439,9 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
                 <Badge variant={selectedPool.runtime?.state === 'running' ? 'success' : 'neutral'}>
                   {selectedPool.runtime?.state ?? t((messages) => messages.adminSandboxRuntime.runtimeUnavailable)}
                 </Badge>
-                {selectedPool.apiKeyConfigured ? (
-                  <Badge variant="outline">
-                    <KeyRound className="mr-1 h-3 w-3" />
-                    {t((messages) => messages.adminSandboxRuntime.apiKeyConfigured)}
-                  </Badge>
-                ) : null}
               </div>
 
               <dl className="grid gap-3 sm:grid-cols-2">
-                <PoolMetric label={t((messages) => messages.adminSandboxRuntime.endpoint)} value={selectedPool.runtime?.url ?? unavailableLabel} />
                 <PoolMetric label={t((messages) => messages.adminSandboxRuntime.pid)} value={formatNullableNumber(selectedPool.runtime?.pid ?? null, unavailableLabel)} />
                 <PoolMetric label={t((messages) => messages.adminSandboxRuntime.cpu)} value={formatPercent(selectedPool.runtime?.cpuPercent ?? null, unavailableLabel)} />
                 <PoolMetric label={t((messages) => messages.adminSandboxRuntime.memory)} value={formatBytes(selectedPool.runtime?.rssBytes ?? null, unavailableLabel)} />
@@ -449,58 +462,37 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
               <PoolConfigInput
                 errorMessage={selectedFieldErrors.poolSize}
                 label={t((messages) => messages.adminSandboxRuntime.poolSize)}
-                ownerLabel={selectedOwnerLabel}
+                ownerLabel={selectedBotLabel}
                 value={selectedEditor.poolSize}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { poolSize: value })}
+                onChange={(value) => updateEditor(selectedPool.botInstanceId, { poolSize: value })}
               />
               <PoolConfigInput
                 errorMessage={selectedFieldErrors.minReadyProcesses}
                 label={t((messages) => messages.adminSandboxRuntime.minReadyProcesses)}
-                ownerLabel={selectedOwnerLabel}
+                ownerLabel={selectedBotLabel}
                 value={selectedEditor.minReadyProcesses}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { minReadyProcesses: value })}
+                onChange={(value) => updateEditor(selectedPool.botInstanceId, { minReadyProcesses: value })}
               />
               <PoolConfigInput
                 errorMessage={selectedFieldErrors.maxConcurrentInit}
                 label={t((messages) => messages.adminSandboxRuntime.maxConcurrentInit)}
-                ownerLabel={selectedOwnerLabel}
+                ownerLabel={selectedBotLabel}
                 value={selectedEditor.maxConcurrentInit}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { maxConcurrentInit: value })}
+                onChange={(value) => updateEditor(selectedPool.botInstanceId, { maxConcurrentInit: value })}
               />
               <PoolConfigInput
                 errorMessage={selectedFieldErrors.healthCheckIntervalMs}
                 label={t((messages) => messages.adminSandboxRuntime.healthCheckIntervalMs)}
-                ownerLabel={selectedOwnerLabel}
+                ownerLabel={selectedBotLabel}
                 value={selectedEditor.healthCheckIntervalMs}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { healthCheckIntervalMs: value })}
+                onChange={(value) => updateEditor(selectedPool.botInstanceId, { healthCheckIntervalMs: value })}
               />
               <PoolConfigInput
                 errorMessage={selectedFieldErrors.sessionTimeoutMs}
                 label={t((messages) => messages.adminSandboxRuntime.sessionTimeoutMs)}
-                ownerLabel={selectedOwnerLabel}
+                ownerLabel={selectedBotLabel}
                 value={selectedEditor.sessionTimeoutMs}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { sessionTimeoutMs: value })}
-              />
-              <PoolConfigInput
-                errorMessage={selectedFieldErrors.port}
-                label={t((messages) => messages.adminSandboxRuntime.port)}
-                ownerLabel={selectedOwnerLabel}
-                value={selectedEditor.port}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { port: value })}
-              />
-              <PoolConfigInput
-                errorMessage={selectedFieldErrors.portRangeStart}
-                label={t((messages) => messages.adminSandboxRuntime.portRangeStart)}
-                ownerLabel={selectedOwnerLabel}
-                value={selectedEditor.portRangeStart}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { portRangeStart: value })}
-              />
-              <PoolConfigInput
-                errorMessage={selectedFieldErrors.portRangeEnd}
-                label={t((messages) => messages.adminSandboxRuntime.portRangeEnd)}
-                ownerLabel={selectedOwnerLabel}
-                value={selectedEditor.portRangeEnd}
-                onChange={(value) => updateEditor(selectedPool.ownerUserId, { portRangeEnd: value })}
+                onChange={(value) => updateEditor(selectedPool.botInstanceId, { sessionTimeoutMs: value })}
               />
             </div>
 
@@ -512,20 +504,20 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
                 variant="outline"
               >
                 <Power className="h-4 w-4" />
-                {isPending && pendingAction?.ownerUserId === selectedPool.ownerUserId && pendingAction.type === 'toggle'
+                {isPending && pendingAction?.botInstanceId === selectedPool.botInstanceId && pendingAction.type === 'toggle'
                   ? t((messages) => messages.adminSandboxRuntime.savePending)
-                  : editors[selectedPool.ownerUserId].enabled
+                  : editors[selectedPool.botInstanceId].enabled
                     ? t((messages) => messages.adminSandboxRuntime.disablePool)
                     : t((messages) => messages.adminSandboxRuntime.enablePool)}
               </Button>
               <Button
                 disabled={isPending}
-                onClick={() => handleRestart(selectedPool.ownerUserId)}
+                onClick={() => handleRestart(selectedPool.botInstanceId)}
                 type="button"
                 variant="outline"
               >
                 <RotateCw className="h-4 w-4" />
-                {isPending && pendingAction?.ownerUserId === selectedPool.ownerUserId && pendingAction.type === 'restart'
+                {isPending && pendingAction?.botInstanceId === selectedPool.botInstanceId && pendingAction.type === 'restart'
                   ? t((messages) => messages.adminSandboxRuntime.restartPending)
                   : t((messages) => messages.adminSandboxRuntime.restartPool)}
               </Button>
@@ -535,7 +527,7 @@ export function AdminSandboxRuntimeConsole({ initialData }: AdminSandboxRuntimeC
                 type="button"
               >
                 <Save className="h-4 w-4" />
-                {isPending && pendingAction?.ownerUserId === selectedPool.ownerUserId && pendingAction.type === 'save'
+                {isPending && pendingAction?.botInstanceId === selectedPool.botInstanceId && pendingAction.type === 'save'
                   ? t((messages) => messages.adminSandboxRuntime.savePending)
                   : t((messages) => messages.adminSandboxRuntime.saveConfig)}
               </Button>
@@ -612,8 +604,8 @@ function PoolConfigInput({
   );
 }
 
-function createEditorStateByOwner(pools: readonly AdminSandboxRuntimePoolItem[]): Record<string, PoolEditorState> {
-  return Object.fromEntries(pools.map((pool) => [pool.ownerUserId, toEditorState(pool)]));
+function createEditorStateByBot(pools: readonly AdminSandboxRuntimePoolItem[]): Record<string, PoolEditorState> {
+  return Object.fromEntries(pools.map((pool) => [pool.botInstanceId, toEditorState(pool)]));
 }
 
 function toEditorState(pool: AdminSandboxRuntimePoolItem): PoolEditorState {
@@ -623,9 +615,6 @@ function toEditorState(pool: AdminSandboxRuntimePoolItem): PoolEditorState {
     maxConcurrentInit: String(pool.maxConcurrentInit),
     minReadyProcesses: String(pool.minReadyProcesses),
     poolSize: String(pool.poolSize),
-    port: String(pool.port),
-    portRangeEnd: String(pool.portRangeEnd),
-    portRangeStart: String(pool.portRangeStart),
     sessionTimeoutMs: String(pool.sessionTimeoutMs),
   };
 }
@@ -655,14 +644,6 @@ function parseEditorState(
     fieldErrors.minReadyProcesses = validationMessages.minReadyProcessesExceedsPoolSize;
   }
 
-  if (
-    parsedValues.portRangeStart !== null
-    && parsedValues.portRangeEnd !== null
-    && parsedValues.portRangeStart > parsedValues.portRangeEnd
-  ) {
-    fieldErrors.portRangeStart = validationMessages.portRangeStartExceedsEnd;
-  }
-
   if (Object.keys(fieldErrors).length > 0) {
     return {
       fieldErrors,
@@ -683,9 +664,6 @@ function toPatchPayload(editor: PoolEditorState, parsedValues: Record<FieldName,
     maxConcurrentInit: parsedValues.maxConcurrentInit!,
     minReadyProcesses: parsedValues.minReadyProcesses!,
     poolSize: parsedValues.poolSize!,
-    port: parsedValues.port!,
-    portRangeEnd: parsedValues.portRangeEnd!,
-    portRangeStart: parsedValues.portRangeStart!,
     sessionTimeoutMs: parsedValues.sessionTimeoutMs!,
   };
 }
@@ -704,11 +682,6 @@ function clearPatchedFieldErrors(patch: Partial<PoolEditorState>): FieldErrors {
   if ('poolSize' in patch || 'minReadyProcesses' in patch) {
     nextErrors.poolSize = undefined;
     nextErrors.minReadyProcesses = undefined;
-  }
-
-  if ('portRangeStart' in patch || 'portRangeEnd' in patch) {
-    nextErrors.portRangeStart = undefined;
-    nextErrors.portRangeEnd = undefined;
   }
 
   return nextErrors;

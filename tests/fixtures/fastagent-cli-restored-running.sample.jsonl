@@ -1,4 +1,4 @@
 {"type":"process_started","timestamp":"2026-03-30T10:18:18.753Z","pid":84721,"message":"IM runtime process started","data":{"channel":"weixin"},"agentId":"bot_contract_smoke"}
-{"type":"running","timestamp":"2026-03-30T10:18:19.068Z","pid":84721,"message":"IM runtime entered steady state","data":{"accountId":"ae45ef95568e@im.bot","source":"restored"},"agentId":"bot_contract_smoke"}
+{"type":"running","timestamp":"2026-03-30T10:18:19.068Z","pid":84721,"message":"IM runtime entered steady state","data":{"accountId":"0123456789ab@im.bot","source":"restored"},"agentId":"bot_contract_smoke"}
 {"type":"stopping","timestamp":"2026-03-30T10:18:33.638Z","pid":84721,"message":"IM runtime stopping","data":{"reason":"signal"},"agentId":"bot_contract_smoke"}
 {"type":"stopped","timestamp":"2026-03-30T10:18:33.639Z","pid":84721,"message":"IM runtime stopped","data":{"exitCode":0,"reason":"signal"},"agentId":"bot_contract_smoke"}

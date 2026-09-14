@@ -93,7 +93,14 @@ export class SupervisorSingletonLock {
     }
 
     if (payload.pid === process.pid) {
-      return false;
+      const actualStartedAt = await getTrackedProcessStartedAt(process.pid);
+
+      if (!actualStartedAt || actualStartedAt === payload.startedAt) {
+        return false;
+      }
+
+      await rm(this.lockFilePath, { force: true });
+      return true;
     }
 
     if (!isProcessAlive(payload.pid)) {
@@ -183,6 +190,22 @@ function inferWorkspaceRoot(lockFilePath: string) {
 }
 
 async function getProcessCommand(pid: number) {
+  if (process.platform === 'win32') {
+    try {
+      const { stdout } = await execFile('powershell.exe', [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `(Get-CimInstance Win32_Process -Filter \"ProcessId = ${pid}\" -ErrorAction Stop).CommandLine`,
+      ]);
+      const command = stdout.trim();
+      return command.length > 0 ? command : null;
+    } catch {
+      return null;
+    }
+  }
+
   try {
     const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'command=']);
     const command = stdout.trim();
@@ -198,7 +221,7 @@ function looksLikeSupervisorProcess(command: string | null, workspaceRoot: strin
     return false;
   }
 
-  return command.includes('@weclaws/supervisor')
+  return command.includes('@weiling-ai/supervisor')
     || command.includes(`${path.sep}src${path.sep}index.ts`)
     || command.includes(`${path.sep}src${path.sep}index.js`)
     || command.includes(`${path.sep}dist${path.sep}index.js`)

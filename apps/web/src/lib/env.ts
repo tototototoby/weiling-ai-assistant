@@ -4,7 +4,7 @@ import {
   parseSandboxRuntimePoolDefaults,
   resolveInstancesRootPath,
   type SandboxRuntimePoolDefaults,
-} from '@weclaws/shared';
+} from '@weiling-ai/shared';
 import { z } from 'zod';
 
 const WEB_REQUIRED_ENV_KEYS = ['DATABASE_URL', 'APP_BASE_URL', 'BETTER_AUTH_SECRET'] as const;
@@ -123,5 +123,7 @@ export function resolveSrtPoolStatusFile(): string {
 
 function resolveWorkspaceRelativePath(configuredPath: string | undefined, fallbackRelativePath: string): string {
   const nextPath = configuredPath?.trim() || fallbackRelativePath;
-  return path.isAbsolute(nextPath) ? nextPath : path.join(getWorkspaceRoot(), nextPath);
+  return path.isAbsolute(nextPath)
+    ? nextPath
+    : path.join(/* turbopackIgnore: true */ getWorkspaceRoot(), nextPath);
 }

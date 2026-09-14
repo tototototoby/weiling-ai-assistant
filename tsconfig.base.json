@@ -12,9 +12,9 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@weclaws/db": ["./packages/db/src/index.ts"],
-      "@weclaws/shared": ["./packages/shared/src/index.ts"],
-      "@weclaws/shared/managed-skills": ["./packages/shared/src/managed-skills/index.ts"]
+      "@weiling-ai/db": ["./packages/db/src/index.ts"],
+      "@weiling-ai/shared": ["./packages/shared/src/index.ts"],
+      "@weiling-ai/shared/managed-skills": ["./packages/shared/src/managed-skills/index.ts"]
     }
   }
 }

@@ -1,7 +1,8 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const readFileMock = vi.fn();
-const getWorkspaceRootMock = vi.fn(() => '/tmp/weclaws');
+const getWorkspaceRootMock = vi.fn(() => '/tmp/weiling');
 
 vi.mock('node:fs/promises', () => ({
   readFile: readFileMock,
@@ -20,7 +21,7 @@ describe('getFastAgentCliVersion', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    getWorkspaceRootMock.mockReturnValue('/tmp/weclaws');
+    getWorkspaceRootMock.mockReturnValue('/tmp/weiling');
   });
 
   it('reads the pinned @fastagent/cli version from apps/supervisor/package.json', async () => {
@@ -33,7 +34,7 @@ describe('getFastAgentCliVersion', () => {
     const { getFastAgentCliVersion } = await import('../fastagent-cli-version');
 
     await expect(getFastAgentCliVersion()).resolves.toBe('0.5.2');
-    expect(readFileMock).toHaveBeenCalledWith('/tmp/weclaws/apps/supervisor/package.json', 'utf8');
+    expect(readFileMock).toHaveBeenCalledWith(join('/tmp/weiling', 'apps', 'supervisor', 'package.json'), 'utf8');
   });
 
   it('returns null when the dependency is missing', async () => {

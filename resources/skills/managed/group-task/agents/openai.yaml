@@ -1,0 +1,7 @@
+interface:
+  display_name: "小组任务"
+  short_description: "查询当前员工任务、提交任务完成，并引导组长查看成员任务"
+  default_prompt: "使用 $group-task 查询当前员工的我的任务、待办或任务进度；提交完成前先展示摘要并取得确认。"
+
+policy:
+  allow_implicit_invocation: true

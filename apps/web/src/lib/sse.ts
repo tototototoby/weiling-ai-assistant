@@ -102,6 +102,7 @@ export function createBotStreamResponse({
                 id: bot.id,
                 lastQrCodeId: bot.lastQrCodeId,
                 lastQrCodeUrl: bot.lastQrCodeUrl,
+                qrCodeIssuedAt: bot.qrCodeIssuedAt,
               },
             });
           }
@@ -215,6 +216,7 @@ function createStatusSignature(bot: BotDetailItem): string {
     lastErrorMessage: bot.lastErrorMessage,
     lastQrCodeId: bot.lastQrCodeId,
     lastQrCodeUrl: bot.lastQrCodeUrl,
+    qrCodeIssuedAt: bot.qrCodeIssuedAt,
     processPid: bot.processPid,
     processStartedAt: bot.processStartedAt,
     restartRequestedAt: bot.restartRequestedAt,

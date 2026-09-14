@@ -99,9 +99,9 @@ describe('sandbox-runtime pool manager', () => {
       SANDBOX_DEFAULT_ALLOW_WRITE: '/tmp',
       SANDBOX_DEFAULT_DENY_READ: '/etc/passwd',
       SANDBOX_DEFAULT_DENY_WRITE: '.env',
-      SANDBOX_WORKSPACE_MAP_FILE: '/app/storage/sandbox-runtime-private/workspace-map/user_1.json',
+      SANDBOX_WORKSPACE_MAP_FILE: '/app/storage/sandbox-runtime-private/workspace-map/bot_1.json',
       SESSION_TIMEOUT: '600000',
-      WORKSPACE_BASE_PATH: '/app/apps/sandbox-runtime/user-workspaces/user_1',
+      WORKSPACE_BASE_PATH: '/app/apps/sandbox-runtime/user-workspaces/bot_1',
       WORKSPACE_ENABLED: 'true',
     });
     expect(env.SANDBOX_URL).toBeUndefined();
@@ -148,7 +148,7 @@ describe('sandbox-runtime pool manager', () => {
 
     const status = JSON.parse(await readFile(join(dir, 'srt-pool-status.json'), 'utf8')) as {
       manager: { managedPoolCount: number; runningPoolCount: number };
-      pools: Array<{ ownerUserId: string; state: string }>;
+      pools: Array<{ botInstanceId: string; state: string }>;
     };
 
     expect(spawnCalls).toHaveLength(2);
@@ -161,7 +161,7 @@ describe('sandbox-runtime pool manager', () => {
     expect(status.manager.managedPoolCount).toBe(1);
     expect(status.manager.runningPoolCount).toBe(0);
     expect(status.pools[0]).toMatchObject({
-      ownerUserId: 'user_1',
+      botInstanceId: 'bot_1',
       state: 'stopped',
     });
   });
@@ -172,15 +172,13 @@ describe('sandbox-runtime pool manager', () => {
 
     const children: FakeChild[] = [];
     const manager = createSandboxRuntimePoolManager({
-      fetchPoolStatus: vi.fn().mockResolvedValue({
-        initialized: true,
-        shuttingDown: false,
-        stats: {
-          activeSessions: 2,
-          busyProcesses: 1,
-          readyProcesses: 2,
-        },
-      }),
+      fetchPoolStatus: vi.fn().mockResolvedValue(createPoolStatus({
+        activeSessions: 2,
+        busyProcesses: 1,
+        processStatuses: ['busy', 'ready', 'ready'],
+        readyProcesses: 2,
+        totalProcesses: 3,
+      })),
       now: () => new Date('2026-05-02T00:00:00.000Z'),
       spawnProcess: () => {
         const child = new FakeChild(200 + children.length);
@@ -201,9 +199,12 @@ describe('sandbox-runtime pool manager', () => {
       pools: Array<{
         activeSessions: number | null;
         busyProcesses: number | null;
+        errorProcesses: number | null;
         lastHealthAt: string | null;
         readyProcesses: number | null;
         state: string;
+        terminalProcessCount: number | null;
+        totalProcesses: number | null;
       }>;
     };
 
@@ -212,21 +213,51 @@ describe('sandbox-runtime pool manager', () => {
     expect(status.pools[0]).toMatchObject({
       activeSessions: 2,
       busyProcesses: 1,
+      errorProcesses: 0,
       lastHealthAt: '2026-05-02T00:00:00.000Z',
       readyProcesses: 2,
       state: 'running',
+      terminalProcessCount: 0,
+      totalProcesses: 3,
     });
+  });
+
+  it('manages two Bot pools owned by the same user as independent children', async () => {
+    const children: FakeChild[] = [];
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus: vi.fn().mockResolvedValue(createPoolStatus()),
+      spawnProcess: () => {
+        const child = new FakeChild(250 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath: join(awaitTempStatusDir(), 'srt-pool-status.json'),
+    });
+
+    await manager.reconcilePools({
+      pools: [
+        createPoolFixture({ botInstanceId: 'bot_1' }),
+        createPoolFixture({
+          botInstanceId: 'bot_2',
+          port: 31_001,
+          portRangeEnd: 9_299,
+          portRangeStart: 9_200,
+        }),
+      ],
+      updatedAt: '2026-05-02T00:00:00.000Z',
+      version: 1,
+    });
+
+    expect(children).toHaveLength(2);
+    expect(manager.children.has('bot_1')).toBe(true);
+    expect(manager.children.has('bot_2')).toBe(true);
   });
 
   it('restarts a running child when health probing fails outside the startup grace window', async () => {
     const children: FakeChild[] = [];
     const fetchPoolStatus = vi
       .fn()
-      .mockResolvedValueOnce({
-        initialized: true,
-        shuttingDown: false,
-        stats: { activeSessions: 0, busyProcesses: 0, readyProcesses: 1 },
-      })
+      .mockResolvedValueOnce(createPoolStatus())
       .mockRejectedValueOnce(new Error('connection refused'));
     const manager = createSandboxRuntimePoolManager({
       childHealthStartupGraceMs: 0,
@@ -253,17 +284,440 @@ describe('sandbox-runtime pool manager', () => {
     expect(children[0].kill).toHaveBeenCalledWith('SIGTERM');
   });
 
+  it('restarts a Bot child when an inner worker is stopped despite a successful status probe', async () => {
+    const children: FakeChild[] = [];
+    const fetchPoolStatus = vi
+      .fn()
+      .mockResolvedValueOnce(createPoolStatus())
+      .mockResolvedValueOnce(createPoolStatus({
+        processStatuses: ['stopped'],
+        readyProcesses: 0,
+      }))
+      .mockResolvedValueOnce(createPoolStatus());
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus,
+      now: () => new Date('2026-05-02T00:00:00.000Z'),
+      spawnProcess: () => {
+        const child = new FakeChild(320 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(2);
+    expect(children[0].kill).toHaveBeenCalledWith('SIGTERM');
+    const status = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{ lastErrorMessage: string | null }>;
+    };
+    expect(status.pools[0].lastErrorMessage).toContain('terminal worker');
+  });
+
+  it('restarts a Bot child immediately when the pool reports error processes', async () => {
+    const children: FakeChild[] = [];
+    const fetchPoolStatus = vi
+      .fn()
+      .mockResolvedValueOnce(createPoolStatus())
+      .mockResolvedValueOnce(createPoolStatus({
+        errorProcesses: 1,
+        processStatuses: ['error'],
+        readyProcesses: 0,
+      }))
+      .mockResolvedValueOnce(createPoolStatus());
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus,
+      now: () => new Date('2026-05-02T00:00:00.000Z'),
+      spawnProcess: () => {
+        const child = new FakeChild(340 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(2);
+    expect(children[0].kill).toHaveBeenCalledWith('SIGTERM');
+    const status = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{ lastErrorMessage: string | null }>;
+    };
+    expect(status.pools[0].lastErrorMessage).toContain('error worker');
+  });
+
+  it('throttles repeated terminal worker replacements per Bot and retries after cooldown', async () => {
+    let currentTimeMs = Date.parse('2026-05-02T00:00:00.000Z');
+    const children: FakeChild[] = [];
+    const fetchPoolStatus = vi
+      .fn()
+      .mockResolvedValueOnce(createPoolStatus())
+      .mockResolvedValue(createPoolStatus({
+        processStatuses: ['stopped'],
+        readyProcesses: 0,
+      }));
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus,
+      now: () => new Date(currentTimeMs),
+      restartCooldownMs: 30_000,
+      spawnProcess: () => {
+        const child = new FakeChild(350 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(document);
+    const replacement = children[1];
+    currentTimeMs += 29_999;
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(2);
+    expect(replacement.kill).not.toHaveBeenCalled();
+    const statusDuringCooldown = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{
+        lastRestartAt: string | null;
+        restartNotBefore: string | null;
+        state: string;
+      }>;
+    };
+    expect(statusDuringCooldown.pools[0]).toMatchObject({
+      lastRestartAt: '2026-05-02T00:00:01.000Z',
+      restartNotBefore: '2026-05-02T00:00:31.000Z',
+      state: 'degraded',
+    });
+
+    currentTimeMs += 1;
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(3);
+    expect(replacement.kill).toHaveBeenCalledWith('SIGTERM');
+  });
+
+  it('throttles a replacement child that also exits until its cooldown expires', async () => {
+    let currentTimeMs = Date.parse('2026-05-02T00:00:00.000Z');
+    const children: FakeChild[] = [];
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus: vi.fn().mockResolvedValue(createPoolStatus()),
+      now: () => new Date(currentTimeMs),
+      restartCooldownMs: 30_000,
+      spawnProcess: () => {
+        const child = new FakeChild(370 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    children[0].emitExit(1);
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(document);
+    children[1].emitExit(1);
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(2);
+    const status = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{
+        lastErrorMessage: string | null;
+        restartNotBefore: string | null;
+        state: string;
+      }>;
+    };
+    expect(status.pools[0]).toMatchObject({
+      restartNotBefore: '2026-05-02T00:00:31.000Z',
+      state: 'stopped',
+    });
+    expect(status.pools[0].lastErrorMessage).toContain('exited with code 1');
+  });
+
+  it('lets an explicit restart intent bypass an active automatic restart cooldown', async () => {
+    let currentTimeMs = Date.parse('2026-05-02T00:00:00.000Z');
+    const children: FakeChild[] = [];
+    const fetchPoolStatus = vi
+      .fn()
+      .mockResolvedValueOnce(createPoolStatus())
+      .mockResolvedValue(createPoolStatus({
+        processStatuses: ['stopped'],
+        readyProcesses: 0,
+      }));
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus,
+      now: () => new Date(currentTimeMs),
+      restartCooldownMs: 30_000,
+      spawnProcess: () => {
+        const child = new FakeChild(390 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath: join(awaitTempStatusDir(), 'srt-pool-status.json'),
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(document);
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(createPoolDocument([
+      createPoolFixture({ restartRequestedAt: '2026-05-02T00:00:02.000Z' }),
+    ]));
+
+    expect(children).toHaveLength(3);
+    expect(children[1].kill).toHaveBeenCalledWith('SIGTERM');
+  });
+
+  it('keeps a recovered replacement running and clears an expired restart cooldown', async () => {
+    let currentTimeMs = Date.parse('2026-05-02T00:00:00.000Z');
+    const children: FakeChild[] = [];
+    const fetchPoolStatus = vi
+      .fn()
+      .mockResolvedValueOnce(createPoolStatus())
+      .mockResolvedValueOnce(createPoolStatus({
+        processStatuses: ['stopped'],
+        readyProcesses: 0,
+      }))
+      .mockResolvedValue(createPoolStatus());
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus,
+      now: () => new Date(currentTimeMs),
+      restartCooldownMs: 30_000,
+      spawnProcess: () => {
+        const child = new FakeChild(410 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(document);
+    currentTimeMs += 31_000;
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(2);
+    expect(children[1].kill).not.toHaveBeenCalled();
+    const status = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{ lastRestartAt: string | null; restartNotBefore: string | null; state: string }>;
+    };
+    expect(status.pools[0]).toMatchObject({
+      lastRestartAt: '2026-05-02T00:00:01.000Z',
+      restartNotBefore: null,
+      state: 'running',
+    });
+  });
+
+  it('allows a continuous capacity deficit briefly and restarts after the grace period', async () => {
+    let currentTimeMs = Date.parse('2026-05-02T00:00:00.000Z');
+    const children: FakeChild[] = [];
+    const fetchPoolStatus = vi.fn().mockResolvedValue(createPoolStatus({
+      processStatuses: ['initializing'],
+      readyProcesses: 0,
+    }));
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      childCapacityGraceMs: 10_000,
+      fetchPoolStatus,
+      now: () => new Date(currentTimeMs),
+      spawnProcess: () => {
+        const child = new FakeChild(360 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    currentTimeMs += 9_999;
+    await manager.reconcilePools(document);
+
+    const statusDuringGrace = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{ capacityDeficitSince: string | null; lastErrorMessage: string | null; state: string }>;
+    };
+    expect(children).toHaveLength(1);
+    expect(children[0].kill).not.toHaveBeenCalled();
+    expect(statusDuringGrace.pools[0]).toMatchObject({
+      capacityDeficitSince: '2026-05-02T00:00:00.000Z',
+      state: 'degraded',
+    });
+    expect(statusDuringGrace.pools[0].lastErrorMessage).toContain('capacity');
+
+    currentTimeMs += 1;
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(2);
+    expect(children[0].kill).toHaveBeenCalledWith('SIGTERM');
+  });
+
+  it('keeps a fully occupied single-worker pool running', async () => {
+    const children: FakeChild[] = [];
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus: vi.fn().mockResolvedValue(createPoolStatus({
+        activeSessions: 1,
+        busyProcesses: 1,
+        processStatuses: ['busy'],
+        readyProcesses: 0,
+      })),
+      now: () => new Date('2026-05-02T00:00:00.000Z'),
+      spawnProcess: () => {
+        const child = new FakeChild(380 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath: join(awaitTempStatusDir(), 'srt-pool-status.json'),
+    });
+    const document = createPoolDocument([createPoolFixture({ poolSize: 1 })]);
+
+    await manager.reconcilePools(document);
+    await manager.reconcilePools(document);
+
+    expect(children).toHaveLength(1);
+    expect(children[0].kill).not.toHaveBeenCalled();
+  });
+
+  it('restarts only the Bot whose inner pool is unhealthy', async () => {
+    const spawnedByKey = new Map<string, FakeChild[]>();
+    const probeCounts = new Map<string, number>();
+    let currentTimeMs = Date.parse('2026-05-02T00:00:00.000Z');
+    const manager = createSandboxRuntimePoolManager({
+      fetchPoolStatus: vi.fn().mockImplementation((pool: { apiKey: string }) => {
+        const probeCount = (probeCounts.get(pool.apiKey) ?? 0) + 1;
+        probeCounts.set(pool.apiKey, probeCount);
+        if (pool.apiKey === 'pool-key-1' && probeCount >= 2) {
+          return createPoolStatus({ processStatuses: ['stopped'], readyProcesses: 0 });
+        }
+        return createPoolStatus();
+      }),
+      now: () => new Date(currentTimeMs),
+      restartCooldownMs: 30_000,
+      spawnProcess: (_command: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+        const apiKey = options.env.API_KEY ?? 'unknown';
+        const children = spawnedByKey.get(apiKey) ?? [];
+        const child = new FakeChild(400 + [...spawnedByKey.values()].flat().length);
+        children.push(child);
+        spawnedByKey.set(apiKey, children);
+        return child;
+      },
+      statusFilePath: join(awaitTempStatusDir(), 'srt-pool-status.json'),
+    });
+    const pools = [
+      createPoolFixture({ apiKey: 'pool-key-1', botInstanceId: 'bot_1' }),
+      createPoolFixture({
+        apiKey: 'pool-key-2',
+        botInstanceId: 'bot_2',
+        port: 31_001,
+        portRangeEnd: 9_299,
+        portRangeStart: 9_200,
+      }),
+    ];
+
+    await manager.reconcilePools(createPoolDocument(pools));
+    const healthyBotChild = manager.children.get('bot_2')?.child;
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(createPoolDocument(pools));
+    currentTimeMs += 1_000;
+    await manager.reconcilePools(createPoolDocument(pools));
+
+    expect(spawnedByKey.get('pool-key-1')).toHaveLength(2);
+    expect(spawnedByKey.get('pool-key-2')).toHaveLength(1);
+    expect(manager.children.get('bot_2')?.child).toBe(healthyBotChild);
+    expect(healthyBotChild.kill).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a successful probe with missing critical stats as healthy', async () => {
+    const children: FakeChild[] = [];
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      childHealthStartupGraceMs: 0,
+      fetchPoolStatus: vi.fn().mockResolvedValue({
+        initialized: true,
+        processes: [{ status: 'ready' }],
+        shuttingDown: false,
+        stats: {
+          activeSessions: 0,
+          busyProcesses: 0,
+          readyProcesses: 1,
+        },
+      }),
+      now: () => new Date('2026-05-02T00:00:00.000Z'),
+      spawnProcess: () => {
+        const child = new FakeChild(420 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    const firstStatus = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{ lastErrorMessage: string | null; state: string }>;
+    };
+
+    expect(firstStatus.pools[0].state).toBe('degraded');
+    expect(firstStatus.pools[0].lastErrorMessage).toContain('critical stats');
+
+    await manager.reconcilePools(document);
+    expect(children).toHaveLength(2);
+  });
+
+  it('requires the pool status to report initialized true explicitly', async () => {
+    const children: FakeChild[] = [];
+    const status = createPoolStatus() as Record<string, unknown>;
+    delete status.initialized;
+    const statusFilePath = join(awaitTempStatusDir(), 'srt-pool-status.json');
+    const manager = createSandboxRuntimePoolManager({
+      childHealthStartupGraceMs: 0,
+      fetchPoolStatus: vi.fn().mockResolvedValue(status),
+      now: () => new Date('2026-05-02T00:00:00.000Z'),
+      spawnProcess: () => {
+        const child = new FakeChild(440 + children.length);
+        children.push(child);
+        return child;
+      },
+      statusFilePath,
+    });
+    const document = createPoolDocument([createPoolFixture()]);
+
+    await manager.reconcilePools(document);
+    const firstStatus = JSON.parse(await readFile(statusFilePath, 'utf8')) as {
+      pools: Array<{ lastErrorMessage: string | null; state: string }>;
+    };
+
+    expect(firstStatus.pools[0]).toMatchObject({
+      lastErrorMessage: 'Sandbox runtime pool status is not initialized.',
+      state: 'degraded',
+    });
+
+    await manager.reconcilePools(document);
+    expect(children).toHaveLength(2);
+  });
+
   it('serializes concurrent reconciles so one restart intent only replaces one child once', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'weixin-claws-srt-manager-concurrent-'));
     tempDirs.push(dir);
 
     const children: FakeChild[] = [];
     const manager = createSandboxRuntimePoolManager({
-      fetchPoolStatus: vi.fn().mockResolvedValue({
-        initialized: true,
-        shuttingDown: false,
-        stats: { activeSessions: 0, busyProcesses: 0, readyProcesses: 1 },
-      }),
+      fetchPoolStatus: vi.fn().mockResolvedValue(createPoolStatus()),
       now: () => new Date('2026-05-02T00:00:00.000Z'),
       spawnProcess: () => {
         const child = new FakeChild(500 + children.length, { exitDelayMs: children.length === 0 ? 10 : 0 });
@@ -369,6 +823,7 @@ function awaitTempStatusDir() {
 function createPoolFixture(overrides: Record<string, unknown> = {}) {
   return {
     apiKey: 'pool-key',
+    botInstanceId: 'bot_1',
     defaultAllowRead: [],
     defaultAllowWrite: ['/tmp'],
     defaultDeniedDomains: [],
@@ -378,7 +833,6 @@ function createPoolFixture(overrides: Record<string, unknown> = {}) {
     healthCheckIntervalMs: 60_000,
     maxConcurrentInit: 1,
     minReadyProcesses: 1,
-    ownerUserId: 'user_1',
     poolSize: 3,
     port: 31_000,
     portRangeEnd: 9_199,
@@ -387,8 +841,41 @@ function createPoolFixture(overrides: Record<string, unknown> = {}) {
     sessionTimeoutMs: 600_000,
     updatedAt: '2026-05-02T00:00:00.000Z',
     url: 'http://sandbox-runtime:31000',
-    workspaceBasePath: '/app/apps/sandbox-runtime/user-workspaces/user_1',
-    workspaceMapFile: '/app/storage/sandbox-runtime-private/workspace-map/user_1.json',
+    workspaceBasePath: '/app/apps/sandbox-runtime/user-workspaces/bot_1',
+    workspaceMapFile: '/app/storage/sandbox-runtime-private/workspace-map/bot_1.json',
     ...overrides,
+  };
+}
+
+function createPoolDocument(pools: Array<Record<string, unknown>>) {
+  return {
+    pools,
+    updatedAt: '2026-05-02T00:00:00.000Z',
+    version: 2,
+  };
+}
+
+function createPoolStatus(overrides: {
+  activeSessions?: number;
+  busyProcesses?: number;
+  errorProcesses?: number;
+  initialized?: boolean;
+  processStatuses?: string[];
+  readyProcesses?: number;
+  shuttingDown?: boolean;
+  totalProcesses?: number;
+} = {}) {
+  const processStatuses = overrides.processStatuses ?? ['ready'];
+  return {
+    initialized: overrides.initialized ?? true,
+    processes: processStatuses.map((status, id) => ({ id, status })),
+    shuttingDown: overrides.shuttingDown ?? false,
+    stats: {
+      activeSessions: overrides.activeSessions ?? 0,
+      busyProcesses: overrides.busyProcesses ?? 0,
+      errorProcesses: overrides.errorProcesses ?? 0,
+      readyProcesses: overrides.readyProcesses ?? 1,
+      totalProcesses: overrides.totalProcesses ?? processStatuses.length,
+    },
   };
 }

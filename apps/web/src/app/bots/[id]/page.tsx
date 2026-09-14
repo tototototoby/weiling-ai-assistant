@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BotDetailLiveView } from '@/components/bots/bot-detail-live-view';
+import { WebChatPanel } from '@/components/bots/web-chat-panel';
 import { Button } from '@/components/ui/button';
 import { getBotDetail, listBotEvents } from '@/lib/bot-service';
 import { listUserLlmProfiles } from '@/lib/llm-profiles';
@@ -45,6 +46,8 @@ export default async function BotDetailPage({ params }: BotDetailPageProps) {
       </div>
 
       <BotDetailLiveView initialBot={bot} initialEvents={events} profiles={profiles} />
+
+      <WebChatPanel botId={id} />
     </section>
   );
 }

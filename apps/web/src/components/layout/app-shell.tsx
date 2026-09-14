@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, Menu, Plus } from 'lucide-react';
+import { Bot, ClipboardList, Menu, Plus, UsersRound } from 'lucide-react';
 import { AccountMenu } from '@/components/layout/account-menu';
 import { BrandLockup } from '@/components/layout/brand-lockup';
 import { ConsoleToolbar } from '@/components/layout/console-toolbar';
@@ -38,6 +38,8 @@ function AppShellNav({ email, isAdmin, layout }: AppShellNavProps) {
   const { t } = useLocale();
   const pathname = usePathname();
   const isBotsRoute = pathname === '/bots' || pathname.startsWith('/bots/');
+  const isMeTasksRoute = pathname.startsWith('/me/tasks');
+  const isMeTeamRoute = pathname.startsWith('/me/team');
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-6" data-shell-nav={layout}>
@@ -77,6 +79,32 @@ function AppShellNav({ email, isAdmin, layout }: AppShellNavProps) {
               <Plus className="h-4 w-4" />
               {t((messages) => messages.shell.createBot)}
             </Button>
+          </Link>
+          <Link
+            aria-current={isMeTasksRoute ? 'page' : undefined}
+            className={cn(
+              'flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-[background-color,color,border-color]',
+              isMeTasksRoute
+                ? 'border border-[color:var(--border-soft)]/80 bg-[color:var(--surface-elevated)]/88 text-foreground shadow-none'
+                : 'bg-transparent text-muted-foreground hover:bg-[color:var(--surface-muted)] hover:text-foreground'
+            )}
+            href="/me/tasks"
+          >
+            <ClipboardList className="h-4 w-4" />
+            {t((messages) => messages.shell.myTasks)}
+          </Link>
+          <Link
+            aria-current={isMeTeamRoute ? 'page' : undefined}
+            className={cn(
+              'flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-[background-color,color,border-color]',
+              isMeTeamRoute
+                ? 'border border-[color:var(--border-soft)]/80 bg-[color:var(--surface-elevated)]/88 text-foreground shadow-none'
+                : 'bg-transparent text-muted-foreground hover:bg-[color:var(--surface-muted)] hover:text-foreground'
+            )}
+            href="/me/team"
+          >
+            <UsersRound className="h-4 w-4" />
+            {t((messages) => messages.shell.myTeam)}
           </Link>
         </nav>
       </div>

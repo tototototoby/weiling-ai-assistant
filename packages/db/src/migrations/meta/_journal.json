@@ -50,6 +50,181 @@
       "when": 1778381696549,
       "tag": "0006_mighty_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784594990017,
+      "tag": "0007_acoustic_moira_mactaggert",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784600024552,
+      "tag": "0008_chilly_james_howlett",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1784721600000,
+      "tag": "0009_bot_agent_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1784768400000,
+      "tag": "0010_dify_and_admin_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1784772000000,
+      "tag": "0011_employee_onboarding",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784800000000,
+      "tag": "0012_qr_code_expiry",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784801000000,
+      "tag": "0013_employee_claim_bot",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784802000000,
+      "tag": "0014_ragflow",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1784880000000,
+      "tag": "0015_bot_sandbox_runtime_pools",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1784885400000,
+      "tag": "0016_morning_briefing_runtime_observation",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784966400000,
+      "tag": "0017_central_morning_briefing_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785052800000,
+      "tag": "0018_wecom_long_connection",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785139200000,
+      "tag": "0019_deferred_admin_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785142800000,
+      "tag": "0020_bot_wecom_bindings",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785225600000,
+      "tag": "0021_global_message_copy",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1785229200000,
+      "tag": "0022_wecom_onboarding",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1785901821413,
+      "tag": "0023_global_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1786504258860,
+      "tag": "0024_web_chat_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786950000000,
+      "tag": "0025_weilink_rebrand",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786970000000,
+      "tag": "0026_attachment_guidance",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1787538126274,
+      "tag": "0027_org_task_broadcast",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1787904000000,
+      "tag": "0028_feishu_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1787907000000,
+      "tag": "0029_scheduled_task_recoveries",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1787910000000,
+      "tag": "0030_feishu_group_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788000000000,
+      "tag": "0031_welink_brand_copy",
+      "breakpoints": true
     }
   ]
 }

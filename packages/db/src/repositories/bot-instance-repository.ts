@@ -1,4 +1,4 @@
-import type { BotDesiredState, BotStatus } from '@weclaws/shared';
+import type { BotDesiredState, BotStatus } from '@weiling-ai/shared';
 import { and, asc, count, eq, isNull, lte, ne, or } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { botInstances } from '../schema/bot-instances';
@@ -120,6 +120,13 @@ export class BotInstanceRepository {
       .all();
   }
 
+  async listAllForAdministration() {
+    return this.db.select()
+      .from(botInstances)
+      .orderBy(asc(botInstances.createdAt), asc(botInstances.id))
+      .all();
+  }
+
   async listByOwnerUserIdAndLlmConfigId(ownerUserId: string, llmConfigId: string) {
     return this.db.select()
       .from(botInstances)
@@ -177,6 +184,7 @@ export class BotInstanceRepository {
       desiredState: 'running',
       qrReissueRequestedAt: null,
       restartBackoffUntil: null,
+      restartCount: 0,
       restartRequestedAt: requestedAt,
       ...(current.status === 'failed'
         ? {
@@ -222,6 +230,7 @@ export class BotInstanceRepository {
       desiredState: 'running',
       qrReissueRequestedAt: requestedAt,
       restartBackoffUntil: null,
+      restartCount: 0,
       restartRequestedAt: null,
       ...(current.status === 'failed'
         ? {
@@ -274,10 +283,22 @@ export class BotInstanceRepository {
   async recordQrCode(id: string, input: RecordQrCodeInput) {
     return this.updateById(id, {
       heartbeatAt: input.observedAt,
+      lastErrorCode: null,
+      lastErrorMessage: null,
       lastQrCodeId: input.qrCodeId,
       lastQrCodeUrl: input.qrCodeUrl,
+      qrCodeIssuedAt: input.observedAt,
       status: 'waiting_for_qr',
       updatedAt: input.observedAt,
+    });
+  }
+
+  async clearQrCode(id: string, clearedAt: Date = new Date()) {
+    return this.updateById(id, {
+      lastQrCodeId: null,
+      lastQrCodeUrl: null,
+      qrCodeIssuedAt: null,
+      updatedAt: clearedAt,
     });
   }
 
@@ -351,6 +372,7 @@ export class BotInstanceRepository {
 
   async consumeRestartRequest(id: string, input: ConsumeRestartRequestInput) {
     return this.updateById(id, {
+      restartCount: 0,
       restartRequestedAt: null,
       updatedAt: input.consumedAt,
     });
@@ -360,7 +382,9 @@ export class BotInstanceRepository {
     return this.updateById(id, {
       lastQrCodeId: null,
       lastQrCodeUrl: null,
+      qrCodeIssuedAt: null,
       qrReissueRequestedAt: null,
+      restartCount: 0,
       updatedAt: consumedAt,
       weixinAccountId: null,
     });

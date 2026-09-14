@@ -1,11 +1,23 @@
 # PATTERNS
 
+## Per-Bot Sandbox Runtime Contract
+
+- Sandbox runtime config/status contracts are version 2 and identify pools by `botInstanceId`; `ownerUserId` is metadata only.
+- The default pool capacity is one ready worker per Bot. Callers may provide explicit per-Bot overrides while retaining unique credentials, ports, and restart boundaries.
+
+## Managed Skill Filtering
+
+- `syncManagedSkills()` accepts an optional explicit `enabledSkillNames` filter. Omitted means the complete manifest; an empty list means remove every weiling-managed Skill while preserving user-owned directories.
+- Filtered sync removes disabled directories only when marker/metadata proves weiling ownership. A same-name user Skill is never deleted or overwritten.
+- `readManagedSkillsMetadata()` is exported only from the server-side `@weiling-ai/shared/managed-skills` path so supervisor can detect filesystem drift without importing database policy into shared.
+- The Bot-scoped sync lock records both PID and process start time. Resolve start time with PowerShell `Get-Process` on Windows and `ps` on POSIX so PID reuse protection remains cross-platform.
+
 ## Contract Boundaries
 
-- cross-workspace 共享 contract 统一通过 `@weclaws/shared` 导出和引用
+- cross-workspace 共享 contract 统一通过 `@weiling-ai/shared` 导出和引用
 - `packages/shared` 只承载跨 app 共享的稳定 contract、常量和类型
 - 不放置依赖数据库、Web 或 child process 的运行时逻辑
-- 涉及 Node `fs` / 进程锁的 server-only 实现，只能放在显式子路径导出里，例如 `@weclaws/shared/managed-skills`；不要回挂到根入口
+- 涉及 Node `fs` / 进程锁的 server-only 实现，只能放在显式子路径导出里，例如 `@weiling-ai/shared/managed-skills`；不要回挂到根入口
 
 ## FastAgent JSONL
 
@@ -20,11 +32,11 @@
 
 ## Sandbox Runtime Pool Contract
 
-- per-user sandbox-runtime pool 的默认配置、配置文件版本和状态文件版本统一由 `packages/shared/src/sandbox-runtime-pools.ts` 定义
+- per-Bot sandbox-runtime pool 的默认配置、配置文件版本和状态文件版本统一由 `packages/shared/src/sandbox-runtime-pools.ts` 定义
 - web 和 supervisor 必须复用 `parseSandboxRuntimePoolDefaults()` 解析 `SRT_DEFAULT_*`、`SRT_PORT_BASE`、`SRT_PROXY_PORT_BASE` 和 `SRT_WORKSPACE_BASE_ROOT`，避免注册时写入 DB 的默认值与 supervisor 渲染值漂移
 - shared 只负责 env 默认值解析、类型和稳定 contract，不读取数据库、不写文件、不启动进程
 - proxy 端口段默认宽度必须能覆盖 `poolSize * 2`，因为每个 worker 当前至少需要一对 proxy port
-- 默认 `SRT_DEFAULT_DENY_READ` 必须包含 `/etc` 账号数据库备份文件和敏感 `/proc` 入口，但不能再包含 `/etc/mtab`；Linux remote sandbox 统一依赖标准化 `${WECLAWS_DATA_ROOT}` 路径和 `/proc/*/mountinfo` / `/proc/*/mounts` deny 做 mount 信息降敏，因为直接 deny `/etc/mtab` 会把 bubblewrap 启动打死
+- 默认 `SRT_DEFAULT_DENY_READ` 必须包含 `/etc` 账号数据库备份文件和敏感 `/proc` 入口，但不能再包含 `/etc/mtab`；Linux remote sandbox 统一依赖标准化 `${WEILING_DATA_ROOT}` 路径和 `/proc/*/mountinfo` / `/proc/*/mounts` deny 做 mount 信息降敏，因为直接 deny `/etc/mtab` 会把 bubblewrap 启动打死
 
 ## SSE Contract
 

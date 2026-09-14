@@ -4,6 +4,7 @@ import { getRepositories } from './repositories';
 
 export const INVITE_RESERVATION_TOKEN_FIELD = 'inviteReservationToken';
 export const BOOTSTRAP_REGISTRATION_TOKEN_FIELD = 'bootstrapRegistrationToken';
+export const EMPLOYEE_ONBOARDING_TOKEN_FIELD = 'employeeOnboardingToken';
 export const INVITE_RESERVATION_TTL_MS = 5 * 60 * 1000;
 
 interface InviteReservationLookupResult {
@@ -16,11 +17,16 @@ interface BootstrapClaimLookupResult {
   claimedByEmail: string | null;
 }
 
+interface EmployeeOnboardingLookupResult {
+  reservedAt: Date | null;
+}
+
 interface ValidateInviteReservationInput {
   body: Record<string, unknown> | null | undefined;
   findReservationByToken(reservationToken: string): Promise<InviteReservationLookupResult | null>;
   findBootstrapClaimByToken?(claimToken: string): Promise<BootstrapClaimLookupResult | null>;
   countUsers?(): Promise<number>;
+  findEmployeeOnboardingByToken?(reservationToken: string): Promise<EmployeeOnboardingLookupResult | null>;
   now?: Date;
 }
 
@@ -50,6 +56,7 @@ export async function validateInviteReservation({
   findReservationByToken,
   findBootstrapClaimByToken,
   countUsers,
+  findEmployeeOnboardingByToken,
   now = new Date(),
 }: ValidateInviteReservationInput): Promise<ValidateInviteReservationResult> {
   if (!body) {
@@ -64,10 +71,35 @@ export async function validateInviteReservation({
   const bootstrapToken = typeof bootstrapTokenValue === 'string'
     ? bootstrapTokenValue.trim()
     : '';
+  const employeeTokenValue = body[EMPLOYEE_ONBOARDING_TOKEN_FIELD];
+  const employeeToken = typeof employeeTokenValue === 'string'
+    ? employeeTokenValue.trim()
+    : '';
   const normalizedEmail = normalizeEmail(body.email);
 
   if (!normalizedEmail) {
     throw createInviteRequiredError();
+  }
+
+
+  if (employeeToken && findEmployeeOnboardingByToken) {
+    const employeeReservation = await findEmployeeOnboardingByToken(employeeToken);
+
+    if (
+      !employeeReservation?.reservedAt
+      || now.getTime() - employeeReservation.reservedAt.getTime() > INVITE_RESERVATION_TTL_MS
+    ) {
+      throw createInviteRequiredError();
+    }
+
+    const {
+      [EMPLOYEE_ONBOARDING_TOKEN_FIELD]: _employeeToken,
+      [BOOTSTRAP_REGISTRATION_TOKEN_FIELD]: _bootstrapToken,
+      [INVITE_RESERVATION_TOKEN_FIELD]: _reservationToken,
+      ...cleanedBody
+    } = body;
+
+    return { cleanedBody, reservationToken: null };
   }
 
   if (!reservationToken) {
@@ -145,6 +177,9 @@ export const inviteOnlyRegistrationPlugin = {
               repositories.registrationBootstrapClaims.findByClaimToken(claimToken)
             ),
             countUsers: () => repositories.users.countAll(),
+            findEmployeeOnboardingByToken: (reservationToken) => (
+              repositories.employeeDirectory.findByReservationToken(reservationToken)
+            ),
           });
 
           return {

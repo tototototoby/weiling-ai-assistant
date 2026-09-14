@@ -1,10 +1,10 @@
 {
-  "name": "@weclaws/db",
-  "version": "0.2.7",
+  "name": "@weiling-ai/db",
+  "version": "0.1.0-beta.1",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@weclaws/shared": "workspace:*",
+    "@weiling-ai/shared": "workspace:*",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2"
   },

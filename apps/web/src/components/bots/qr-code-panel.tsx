@@ -1,16 +1,19 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { normalizeTrustedQrCodeUrl } from '@weclaws/shared';
+import { useEffect, useState } from 'react';
+import { normalizeTrustedQrCodeUrl } from '@weiling-ai/shared';
 import { useLocale } from '@/components/providers/locale-provider';
 import { SectionCard } from '@/components/layout/section-card';
 import { Button } from '@/components/ui/button';
+import { getQrCodeExpiresAt, isQrCodeExpired } from '@/lib/qr-code-expiry';
 
 interface QrCodePanelProps {
   actions?: ReactNode;
   compact?: boolean;
   embedded?: boolean;
   qrCodeId: string | null;
+  qrCodeIssuedAt?: string | null;
   qrCodeUrl: string | null;
 }
 
@@ -19,11 +22,23 @@ export function QrCodePanel({
   compact = false,
   embedded = false,
   qrCodeId,
+  qrCodeIssuedAt = null,
   qrCodeUrl,
 }: QrCodePanelProps) {
   const { t } = useLocale();
-  const trustedQrCodeUrl = normalizeTrustedQrCodeUrl(qrCodeUrl);
+  const [now, setNow] = useState(0);
+  const expiresAt = getQrCodeExpiresAt(qrCodeIssuedAt);
+  const expired = now > 0 && Boolean(qrCodeUrl) && isQrCodeExpired(qrCodeIssuedAt, now);
+  const trustedQrCodeUrl = expired ? null : normalizeTrustedQrCodeUrl(qrCodeUrl);
   const qrPreviewUrl = trustedQrCodeUrl ? `/api/qrcode?value=${encodeURIComponent(trustedQrCodeUrl)}` : null;
+
+  useEffect(() => {
+    setNow(Date.now());
+    if (!qrCodeIssuedAt || !qrCodeUrl) return undefined;
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(intervalId);
+  }, [qrCodeIssuedAt, qrCodeUrl]);
+
   const content = trustedQrCodeUrl ? (
     <div className="grid gap-4">
       {qrPreviewUrl ? (
@@ -59,6 +74,11 @@ export function QrCodePanel({
               <p className="m-0">{t((messages) => messages.botDetail.qrPreviewDescription)}</p>
             </>
           )}
+          {expiresAt && now > 0 ? (
+            <p className="m-0">
+              {t((messages) => messages.botDetail.qrExpiresIn({ time: formatRemaining(expiresAt.getTime() - now) }))}
+            </p>
+          ) : null}
         </div>
 
         <div
@@ -78,8 +98,8 @@ export function QrCodePanel({
   ) : (
     <div className="grid gap-3 rounded-[1.25rem] border border-dashed border-[color:var(--border-strong)]/75 bg-[color:var(--surface-muted)]/72 px-5 py-6">
       <div className="grid gap-2">
-        <strong className="text-base font-semibold text-foreground">{t((messages) => messages.botDetail.noQrTitle)}</strong>
-        <p className="m-0 text-sm leading-6 text-muted-foreground">{t((messages) => messages.botDetail.noQrDescription)}</p>
+        <strong className="text-base font-semibold text-foreground">{expired ? t((messages) => messages.botDetail.qrExpiredTitle) : t((messages) => messages.botDetail.noQrTitle)}</strong>
+        <p className="m-0 text-sm leading-6 text-muted-foreground">{expired ? t((messages) => messages.botDetail.qrExpiredDescription) : t((messages) => messages.botDetail.noQrDescription)}</p>
       </div>
       {actions ? (
         <div
@@ -102,4 +122,11 @@ export function QrCodePanel({
       {content}
     </SectionCard>
   );
+}
+
+function formatRemaining(remainingMs: number) {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }

@@ -1,0 +1,7 @@
+interface:
+  display_name: "小灵群发通知"
+  short_description: "组长或已授权员工通过小灵向本组、全员或指定人员发送通知"
+  default_prompt: "使用 $broadcast-notice 主动发送通知时，先确认范围并展示全文，取得用户明确确认后再调用广播脚本。"
+
+policy:
+  allow_implicit_invocation: true

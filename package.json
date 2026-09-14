@@ -1,18 +1,18 @@
 {
-  "name": "weclaws",
-  "version": "0.2.7",
+  "name": "weiling-ai-assistant",
+  "version": "0.1.0-beta.1",
   "private": true,
-  "description": "Self-hosted 多用户微信 AI 智能体控制台，支持 Web 管理、Docker Compose、二维码分享、MCP、技能、沙盒执行和长期运行。",
+  "description": "微Link · 微灵 AI 助手（Weiling AI Assistant）：自托管、多用户、跨端共享上下文的 AI 助理平台。",
   "license": "MIT",
-  "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yokingma/weclaws.git"
+    "url": "git+https://github.com/tototototoby/weiling-ai-assistant.git"
   },
-  "homepage": "https://github.com/yokingma/weclaws#readme",
+  "homepage": "https://github.com/tototototoby/weiling-ai-assistant#readme",
   "bugs": {
-    "url": "https://github.com/yokingma/weclaws/issues"
+    "url": "https://github.com/tototototoby/weiling-ai-assistant/issues"
   },
+  "type": "module",
   "keywords": [
     "wechat",
     "wechat-bot",
@@ -26,34 +26,46 @@
     "bot-management"
   ],
   "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "@esbuild-kit/core-utils>esbuild": "0.25.12",
+      "baseline-browser-mapping": "2.11.0",
+      "defu": "6.1.7",
+      "nanoid": "3.3.19",
+      "postcss": "8.5.28",
+      "shell-quote": "1.10.0",
+      "tsx>esbuild": "0.28.1",
+      "ws": "8.21.3"
+    }
+  },
   "engines": {
     "node": ">=20.0.0"
   },
-  "pnpm": {
-    "overrides": {
-      "defu": "6.1.7",
-      "@esbuild-kit/core-utils>esbuild": "0.25.12",
-      "postcss": "8.5.14",
-      "ws": "8.20.1"
-    }
-  },
   "scripts": {
-    "dev:web": "pnpm --filter @weclaws/web dev",
-    "dev:supervisor": "pnpm --filter @weclaws/supervisor dev",
+    "dev:web": "pnpm --filter @weiling-ai/web dev",
+    "dev:supervisor": "pnpm --filter @weiling-ai/supervisor dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --workspace-concurrency=1 test",
     "typecheck": "pnpm -r typecheck",
     "test:fastagent-contract": "pnpm exec vitest --run tests/integration/fastagent-cli-contract.test.ts",
+    "test:rebrand": "pnpm exec vitest --run tests/product-version.test.ts tests/migrate-weclaws-data.test.mjs",
+    "prepare:fastagent": "node ./apps/supervisor/scripts/patch-fastagent-cli.mjs --idempotent",
     "lint": "pnpm run typecheck",
+    "data:migrate": "node ./scripts/migrate-weclaws-data.mjs",
+    "db:sync-agent-seed": "node ./scripts/sync-agent-seed-migration.mjs",
+    "docs:check": "node ./scripts/check-markdown-links.mjs",
+    "config:check": "node ./scripts/check-config-files.mjs",
     "version:check": "node ./scripts/product-version.mjs check",
     "version:sync": "node ./scripts/product-version.mjs sync",
-    "db:generate": "pnpm --filter @weclaws/db db:generate",
-    "db:migrate": "pnpm --filter @weclaws/db db:migrate"
+    "db:generate": "pnpm --filter @weiling-ai/db db:generate",
+    "db:migrate": "pnpm --filter @weiling-ai/db db:migrate"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "vite": "^6.4.2",
-    "vitest": "^4.1.6",
-    "typescript": "^5.7.3"
+    "sharp": "0.35.4",
+    "vite": "6.4.3",
+    "vitest": "4.1.11",
+    "typescript": "^5.7.3",
+    "yaml": "2.9.1"
   }
 }

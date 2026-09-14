@@ -33,7 +33,7 @@ export function SignInForm() {
         return;
       }
 
-      router.push('/bots');
+      router.push('/');
       router.refresh();
     });
   };

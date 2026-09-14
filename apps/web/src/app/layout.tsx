@@ -11,10 +11,10 @@ interface RootLayoutProps {
 }
 
 export const metadata: Metadata = {
-  title: 'WeClaws',
-  description: 'WeClaws is a bilingual control plane for Weixin bots.',
+  title: '微Link · 微灵 AI 助手',
+  description: '微Link · 微灵 AI 助手 - 微信智能体管理平台。',
   icons: {
-    icon: '/brand/logo-black.png',
+    icon: '/brand/weiling-mark.png',
   },
 };
 

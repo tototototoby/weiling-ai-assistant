@@ -5,7 +5,7 @@ const MANAGED_SKILLS_ROOT = new URL('../../../../../resources/skills/managed/', 
 const SKILL_ROOT = new URL('editorial-card-screenshot/', MANAGED_SKILLS_ROOT);
 
 describe('editorial-card-screenshot bundle contract', () => {
-  it('keeps SKILL frontmatter limited to WeClaws-supported metadata', async () => {
+  it('keeps SKILL frontmatter limited to weiling-supported metadata', async () => {
     const skillDoc = await readSkillText('SKILL.md');
 
     expect(skillDoc).toContain('name: editorial-card-screenshot');

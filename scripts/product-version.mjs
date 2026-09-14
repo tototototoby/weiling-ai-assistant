@@ -1,11 +1,15 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PRODUCT_VERSION_FILENAME = 'VERSION';
 const PACKAGE_JSON_FILENAME = 'package.json';
 const WORKSPACE_ROOTS = ['apps', 'packages'];
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+function toRepoRelative(rootDir, targetPath) {
+  return relative(rootDir, targetPath).replaceAll('\\', '/');
+}
 
 export async function readProductVersion(rootDir) {
   const versionPath = join(rootDir, PRODUCT_VERSION_FILENAME);
@@ -31,7 +35,7 @@ export async function checkProductVersion(rootDir) {
       mismatches.push({
         currentVersion: packageJson.version,
         expectedVersion: version,
-        relativePath: relative(rootDir, packageJsonPath),
+        relativePath: toRepoRelative(rootDir, packageJsonPath),
       });
     }
   }
@@ -56,7 +60,7 @@ export async function syncProductVersion(rootDir) {
 
     packageJson.version = version;
     await writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
-    updatedFiles.push(relative(rootDir, packageJsonPath));
+    updatedFiles.push(toRepoRelative(rootDir, packageJsonPath));
   }
 
   return {
@@ -82,7 +86,7 @@ async function listPackageJsonPaths(rootDir) {
   }
 
   return packageJsonPaths.sort((left, right) => {
-    return relative(rootDir, left).localeCompare(relative(rootDir, right));
+    return toRepoRelative(rootDir, left).localeCompare(toRepoRelative(rootDir, right));
   });
 }
 
@@ -125,7 +129,7 @@ async function runCli() {
 }
 
 const isEntrypoint = process.argv[1]
-  && import.meta.url === new URL(process.argv[1], 'file:').href;
+  && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 
 if (isEntrypoint) {
   await runCli();

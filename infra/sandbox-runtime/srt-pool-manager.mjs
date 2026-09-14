@@ -13,7 +13,9 @@ const DEFAULT_STATUS_FILE = '/app/storage/sandbox-runtime-private/srt-pool-statu
 const DEFAULT_MANAGER_PORT = 8788;
 const DEFAULT_RECONCILE_INTERVAL_MS = 2_000;
 const DEFAULT_CHILD_HEALTH_STARTUP_GRACE_MS = 10_000;
+const DEFAULT_CHILD_CAPACITY_GRACE_MS = 10_000;
 const DEFAULT_CHILD_HEALTH_TIMEOUT_MS = 1_500;
+const DEFAULT_RESTART_COOLDOWN_MS = 30_000;
 const DEFAULT_STOP_GRACE_MS = 3_000;
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_CHILD_ENTRY = join(CURRENT_DIR, 'srt-child-entry.mjs');
@@ -87,10 +89,13 @@ export function createSandboxRuntimePoolManager(options = {}) {
   const statusFilePath = options.statusFilePath ?? process.env.SRT_POOL_STATUS_FILE ?? DEFAULT_STATUS_FILE;
   const now = options.now ?? (() => new Date());
   const childHealthStartupGraceMs = options.childHealthStartupGraceMs ?? DEFAULT_CHILD_HEALTH_STARTUP_GRACE_MS;
+  const childCapacityGraceMs = options.childCapacityGraceMs ?? DEFAULT_CHILD_CAPACITY_GRACE_MS;
   const childHealthTimeoutMs = options.childHealthTimeoutMs ?? DEFAULT_CHILD_HEALTH_TIMEOUT_MS;
   const fetchPoolStatus = options.fetchPoolStatus ?? fetchPoolStatusOverHttp;
+  const restartCooldownMs = options.restartCooldownMs ?? DEFAULT_RESTART_COOLDOWN_MS;
   const stopGraceMs = options.stopGraceMs ?? DEFAULT_STOP_GRACE_MS;
   let operationQueue = Promise.resolve();
+  let managerResourceUsage = null;
   let lastStatusDocument = createStatusDocument({
     children,
     lastErrorMessage: null,
@@ -124,69 +129,91 @@ export function createSandboxRuntimePoolManager(options = {}) {
 
   async function runReconcilePools(document) {
     const pools = Array.isArray(document?.pools) ? document.pools : [];
-    const desiredOwnerIds = new Set(pools.map((pool) => pool.ownerUserId));
+    const desiredBotIds = new Set(pools.map((pool) => pool.botInstanceId));
 
-    for (const [ownerUserId, managedChild] of children.entries()) {
-      if (!desiredOwnerIds.has(ownerUserId)) {
+    for (const [botInstanceId, managedChild] of children.entries()) {
+      if (!desiredBotIds.has(botInstanceId)) {
         await stopManagedChild(managedChild, { stopGraceMs });
-        children.delete(ownerUserId);
+        children.delete(botInstanceId);
       }
     }
 
     for (const pool of pools) {
-      const existing = children.get(pool.ownerUserId);
+      const existing = children.get(pool.botInstanceId);
 
       if (!pool.enabled) {
         if (existing) {
           await stopManagedChild(existing, { stopGraceMs });
-          children.delete(pool.ownerUserId);
+          children.delete(pool.botInstanceId);
         }
         continue;
       }
 
       const configHash = hashPoolConfig(pool);
-      if (existing && existing.configHash === configHash && isManagedChildRunning(existing)) {
-        const healthy = await refreshManagedChildHealth(existing, pool, {
+      const sameConfig = existing?.configHash === configHash;
+      if (existing && sameConfig && isManagedChildRunning(existing)) {
+        const shouldKeepChild = await refreshManagedChildHealth(existing, pool, {
+          childCapacityGraceMs,
           childHealthStartupGraceMs,
           childHealthTimeoutMs,
           fetchPoolStatus,
           now,
         });
 
-        if (healthy) {
+        if (shouldKeepChild) {
+          if (existing.state === 'running') {
+            clearExpiredRestartCooldown(existing, now());
+          }
           continue;
         }
       }
 
-      if (existing) {
-        await stopManagedChild(existing, { stopGraceMs });
-        children.delete(pool.ownerUserId);
+      if (existing && sameConfig && isRestartCooldownActive(existing, now())) {
+        continue;
       }
 
+      if (existing) {
+        await stopManagedChild(existing, { stopGraceMs });
+        children.delete(pool.botInstanceId);
+      }
+
+      const recoveryMessage = existing?.lastErrorMessage ?? null;
+      const restartedAt = existing ? now() : null;
       const child = spawnProcess(process.execPath, [childEntryPath], {
         env: buildChildEnv(pool, process.env),
         stdio: ['ignore', 'inherit', 'inherit'],
       });
       const managedChild = {
+        botInstanceId: pool.botInstanceId,
+        capacityDeficitSince: null,
         child,
         configHash,
-        lastErrorMessage: null,
+        lastErrorMessage: recoveryMessage,
         lastExitCode: null,
         lastHealthAt: null,
-        lastRestartAt: pool.restartRequestedAt,
-        ownerUserId: pool.ownerUserId,
+        lastRestartAt: restartedAt?.toISOString() ?? null,
         poolStats: null,
+        recoveryMessagePending: recoveryMessage,
         resourceUsage: null,
+        restartNotBefore: restartedAt
+          ? new Date(restartedAt.getTime() + restartCooldownMs).toISOString()
+          : null,
         startedAt: now().toISOString(),
         state: 'starting',
       };
 
       child.on?.('exit', (exitCode) => {
+        const wasStopping = managedChild.state === 'stopping';
         managedChild.lastExitCode = exitCode;
+        if (!wasStopping) {
+          managedChild.lastErrorMessage ??= `Sandbox runtime child exited with code ${exitCode ?? 'unknown'}.`;
+        }
+        managedChild.recoveryMessagePending = null;
         managedChild.state = 'stopped';
       });
-      children.set(pool.ownerUserId, managedChild);
+      children.set(pool.botInstanceId, managedChild);
       await refreshManagedChildHealth(managedChild, pool, {
+        childCapacityGraceMs,
         childHealthStartupGraceMs,
         childHealthTimeoutMs,
         fetchPoolStatus,
@@ -195,6 +222,7 @@ export function createSandboxRuntimePoolManager(options = {}) {
     }
 
     await collectResources(children);
+    managerResourceUsage = await readProcessResourceUsage(process.pid, managerResourceUsage);
     await writeStatus(pools, null);
   }
 
@@ -211,6 +239,7 @@ export function createSandboxRuntimePoolManager(options = {}) {
     lastStatusDocument = createStatusDocument({
       children,
       lastErrorMessage,
+      managerResourceUsage,
       now: timestamp,
       pools,
     });
@@ -254,7 +283,7 @@ export async function readPoolConfig(configFilePath) {
       return {
         pools: [],
         updatedAt: new Date(0).toISOString(),
-        version: 1,
+        version: 2,
       };
     }
 
@@ -305,25 +334,110 @@ async function collectResources(children) {
 
 async function refreshManagedChildHealth(managedChild, pool, options) {
   if (!isManagedChildRunning(managedChild)) {
+    managedChild.capacityDeficitSince = null;
     managedChild.state = 'stopped';
     return false;
   }
 
   try {
     const status = await options.fetchPoolStatus(pool, { timeoutMs: options.childHealthTimeoutMs });
-    managedChild.lastErrorMessage = null;
-    managedChild.lastHealthAt = options.now().toISOString();
-    managedChild.poolStats = normalizePoolStats(status?.stats);
-    managedChild.state = status?.initialized !== false && status?.shuttingDown !== true
-      ? 'running'
-      : getStartupState(managedChild, options);
-    return managedChild.state === 'running' || managedChild.state === 'starting';
+    const checkedAt = options.now();
+    managedChild.lastHealthAt = checkedAt.toISOString();
+    managedChild.poolStats = normalizePoolStats(status?.stats, status?.processes);
+
+    if (status?.initialized !== true) {
+      managedChild.capacityDeficitSince = null;
+      return markManagedChildUnavailable(
+        managedChild,
+        options,
+        'Sandbox runtime pool status is not initialized.',
+      );
+    }
+
+    if (status?.shuttingDown !== false) {
+      managedChild.capacityDeficitSince = null;
+      return markManagedChildUnavailable(
+        managedChild,
+        options,
+        status?.shuttingDown === true
+          ? 'Sandbox runtime pool is shutting down.'
+          : 'Sandbox runtime pool status does not report shuttingDown=false.',
+      );
+    }
+
+    if (managedChild.poolStats.errorProcesses > 0) {
+      managedChild.capacityDeficitSince = null;
+      managedChild.lastErrorMessage = `Sandbox runtime pool reports ${managedChild.poolStats.errorProcesses} error worker process(es).`;
+      managedChild.recoveryMessagePending = null;
+      managedChild.state = 'degraded';
+      return false;
+    }
+
+    if (managedChild.poolStats.terminalProcessCount > 0) {
+      managedChild.capacityDeficitSince = null;
+      managedChild.lastErrorMessage = `Sandbox runtime pool has ${managedChild.poolStats.terminalProcessCount} terminal worker process(es).`;
+      managedChild.recoveryMessagePending = null;
+      managedChild.state = 'degraded';
+      return false;
+    }
+
+    const missingStats = listMissingCriticalPoolStats(managedChild.poolStats);
+    if (missingStats.length > 0) {
+      managedChild.capacityDeficitSince = null;
+      managedChild.recoveryMessagePending = null;
+      return markManagedChildUnavailable(
+        managedChild,
+        options,
+        `Sandbox runtime pool status is missing critical stats: ${missingStats.join(', ')}.`,
+      );
+    }
+
+    const serviceableProcesses = managedChild.poolStats.readyProcesses
+      + managedChild.poolStats.busyProcesses;
+    const requiredProcesses = Math.max(
+      pool.minReadyProcesses,
+      managedChild.poolStats.activeSessions,
+    );
+
+    if (serviceableProcesses < requiredProcesses) {
+      managedChild.capacityDeficitSince ??= checkedAt.toISOString();
+      managedChild.recoveryMessagePending = null;
+      managedChild.lastErrorMessage = [
+        'Sandbox runtime pool capacity deficit:',
+        `${serviceableProcesses} serviceable process(es),`,
+        `${requiredProcesses} required`,
+        `(ready=${managedChild.poolStats.readyProcesses},`,
+        `busy=${managedChild.poolStats.busyProcesses},`,
+        `activeSessions=${managedChild.poolStats.activeSessions},`,
+        `minReadyProcesses=${pool.minReadyProcesses}).`,
+      ].join(' ');
+      managedChild.state = 'degraded';
+
+      const deficitStartedAtMs = Date.parse(managedChild.capacityDeficitSince);
+      return Number.isFinite(deficitStartedAtMs)
+        && checkedAt.getTime() - deficitStartedAtMs < options.childCapacityGraceMs;
+    }
+
+    managedChild.capacityDeficitSince = null;
+    managedChild.lastErrorMessage = managedChild.recoveryMessagePending ?? null;
+    managedChild.recoveryMessagePending = null;
+    managedChild.state = 'running';
+    return true;
   } catch (error) {
+    managedChild.capacityDeficitSince = null;
     managedChild.lastErrorMessage = error instanceof Error ? error.message : String(error);
     managedChild.poolStats = null;
+    managedChild.recoveryMessagePending = null;
     managedChild.state = getStartupState(managedChild, options);
     return managedChild.state === 'starting';
   }
+}
+
+function markManagedChildUnavailable(managedChild, options, message) {
+  managedChild.lastErrorMessage = message;
+  managedChild.recoveryMessagePending = null;
+  managedChild.state = getStartupState(managedChild, options);
+  return managedChild.state === 'starting';
 }
 
 function getStartupState(managedChild, options) {
@@ -339,12 +453,59 @@ function isWithinStartupGrace(managedChild, options) {
   return options.now().getTime() - startedAtMs < options.childHealthStartupGraceMs;
 }
 
-function normalizePoolStats(stats) {
+function isRestartCooldownActive(managedChild, checkedAt) {
+  const restartNotBeforeMs = Date.parse(managedChild.restartNotBefore ?? '');
+  return Number.isFinite(restartNotBeforeMs) && checkedAt.getTime() < restartNotBeforeMs;
+}
+
+function clearExpiredRestartCooldown(managedChild, checkedAt) {
+  if (!managedChild.restartNotBefore || isRestartCooldownActive(managedChild, checkedAt)) {
+    return;
+  }
+  managedChild.restartNotBefore = null;
+}
+
+function normalizePoolStats(stats, processes) {
   return {
     activeSessions: normalizeNonNegativeInteger(stats?.activeSessions),
     busyProcesses: normalizeNonNegativeInteger(stats?.busyProcesses),
+    errorProcesses: normalizeNonNegativeInteger(stats?.errorProcesses),
     readyProcesses: normalizeNonNegativeInteger(stats?.readyProcesses),
+    terminalProcessCount: countTerminalProcesses(processes),
+    totalProcesses: normalizeNonNegativeInteger(stats?.totalProcesses),
   };
+}
+
+function listMissingCriticalPoolStats(stats) {
+  return [
+    'activeSessions',
+    'busyProcesses',
+    'errorProcesses',
+    'readyProcesses',
+    'terminalProcessCount',
+    'totalProcesses',
+  ].filter((key) => stats[key] === null);
+}
+
+function countTerminalProcesses(processes) {
+  if (!Array.isArray(processes)) {
+    return null;
+  }
+
+  let terminalProcessCount = 0;
+  for (const processInfo of processes) {
+    const status = typeof processInfo?.status === 'string'
+      ? processInfo.status.trim().toLowerCase()
+      : null;
+    if (!status) {
+      return null;
+    }
+    if (status === 'stopped' || status === 'error') {
+      terminalProcessCount += 1;
+    }
+  }
+
+  return terminalProcessCount;
 }
 
 function normalizeNonNegativeInteger(value) {
@@ -399,6 +560,7 @@ function hasChildExited(child) {
 function hashPoolConfig(pool) {
   return createHash('sha256').update(JSON.stringify({
     apiKey: pool.apiKey,
+    botInstanceId: pool.botInstanceId,
     defaultAllowRead: pool.defaultAllowRead,
     defaultAllowWrite: pool.defaultAllowWrite,
     defaultDeniedDomains: pool.defaultDeniedDomains,

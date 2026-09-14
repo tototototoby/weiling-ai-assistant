@@ -47,4 +47,9 @@ export class UserRepository {
     const row = this.db.select().from(users).where(eq(users.id, id)).get();
     return row ?? null;
   }
+
+  async deleteById(id: string) {
+    const result = this.db.delete(users).where(eq(users.id, id)).run();
+    return result.changes > 0;
+  }
 }

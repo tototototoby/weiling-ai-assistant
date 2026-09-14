@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-14",
+  "source": "assets/brand/source-logo.png",
+  "palette": {
+    "ink": "#19323C",
+    "muted": "#56717A",
+    "pale": "#E7F5F8",
+    "paper": "#F9FCFD",
+    "white": "#FFFFFF",
+    "blue": "#B3E1F6",
+    "blueDeep": "#77C9EC",
+    "pink": "#FCABA7",
+    "pinkPale": "#FFD9D6",
+    "mint": "#DDF5EB",
+    "line": "#D9E9ED"
+  },
+  "outputs": [
+    "assets/brand/logo-mark.svg",
+    "assets/brand/logo-mark-512.png",
+    "assets/brand/logo-mark-128.png",
+    "assets/brand/logo-mark-64.png",
+    "assets/brand/logo-mark-32.png",
+    "assets/brand/wordmark-horizontal.svg",
+    "assets/brand/wordmark-horizontal.png",
+    "assets/brand/hero-1600x600.svg",
+    "assets/brand/hero-1600x600.png",
+    "assets/brand/social-preview-1280x640.svg",
+    "assets/brand/social-preview-1280x640.png",
+    "assets/diagrams/architecture.svg",
+    "assets/diagrams/architecture.png",
+    "assets/diagrams/cross-channel-context.svg",
+    "assets/diagrams/cross-channel-context.png",
+    "assets/diagrams/voice-to-poster.svg",
+    "assets/diagrams/voice-to-poster.png",
+    "assets/demo/voice-to-poster.gif"
+  ],
+  "notes": [
+    "The supplied pink-and-blue mascot is the only identity anchor.",
+    "All copy, labels, sizes, and logo geometry are deterministically composed.",
+    "No generated asset contains real account data, QR tokens, credentials, or platform logos."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "0.1.0-beta.1",
+  "enabledByDefault": false,
+  "timezone": "Asia/Shanghai",
+  "time": "08:30",
+  "defaultLocation": "请配置城市",
+  "calendarFile": "china-workdays-2026.json",
+  "scheduleMarker": "[WEILING:MORNING_BRIEFING:v1]",
+  "maxTodayTasks": 8,
+  "maxOverdueTasks": 5,
+  "maxUndatedTasks": 3
+}

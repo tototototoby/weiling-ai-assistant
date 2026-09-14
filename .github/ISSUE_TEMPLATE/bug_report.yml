@@ -1,0 +1,70 @@
+name: Bug report
+description: 报告可以稳定复现的问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请不要粘贴 API Key、Cookie、真实二维码、聊天原文、客户资料或内部地址。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题摘要
+      description: 你原本想做什么，实际发生了什么？
+      placeholder: 简洁描述预期与实际结果
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本、tag 或 commit
+      placeholder: v0.1.0-beta.1 / abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: 部署方式
+      options:
+        - Docker Compose
+        - 本地开发
+        - 其他（请在下方说明）
+    validations:
+      required: true
+  - type: dropdown
+    id: channel
+    attributes:
+      label: 相关通道
+      options:
+        - Web
+        - 微信
+        - 企业微信
+        - 飞书
+        - 沙箱/浏览器
+        - 不涉及通道
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 最小复现步骤
+      description: 使用虚拟账号、占位文件和脱敏配置。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 脱敏日志与环境
+      description: 请删除密钥、Cookie、二维码、Token、邮箱、内网地址和真实聊天内容。
+      render: shell
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已阅读排障指南，并确认这个 Issue 不包含秘密或个人数据。
+          required: true
