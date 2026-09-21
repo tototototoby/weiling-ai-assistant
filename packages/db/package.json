@@ -6,7 +6,7 @@
   "type": "module",
   "dependencies": {
     "@weiling-ai/shared": "workspace:*",
-    "better-sqlite3": "^12.10.0",
+    "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
